@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circuit City Startup — Electronics Store Simulation</title>
+<style>
+:root{
+  --bg:#0b1020; --bg2:#101832; --card:#151f3d; --card2:#1b2750;
+  --line:#2a3763; --ink:#e8edf9; --ink2:#a6b3d6; --muted:#7482ab;
+  --accent:#4cc3ff; --accent2:#8b7bff; --good:#3ddc97; --warn:#ffc857; --bad:#ff6b81;
+  --chart:#4499ec;
+  --radius:14px;
+  font-size:15px;
+}
+*{box-sizing:border-box; margin:0; padding:0}
+body{
+  background:radial-gradient(1200px 600px at 80% -10%, #16224a 0%, var(--bg) 55%);
+  color:var(--ink); font-family:"Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  min-height:100vh;
+}
+button{font-family:inherit}
+h1,h2,h3{font-weight:700; letter-spacing:.2px}
+.wrap{max-width:1180px; margin:0 auto; padding:18px 20px 60px}
+.small{font-size:.82rem; color:var(--ink2)}
+.tiny{font-size:.75rem; color:var(--muted)}
+.money{font-variant-numeric:tabular-nums}
+.good{color:var(--good)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+.hidden{display:none !important}
+
+/* ---------- generic cards / buttons ---------- */
+.card{background:linear-gradient(180deg,var(--card),var(--card2)); border:1px solid var(--line);
+  border-radius:var(--radius); padding:16px; box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.btn{cursor:pointer; border:1px solid var(--line); background:#233059; color:var(--ink);
+  padding:8px 14px; border-radius:10px; font-size:.9rem; transition:transform .06s, background .15s}
+.btn:hover{background:#2c3c6e}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:linear-gradient(135deg,#2f7ff0,#7b5cff); border-color:#3b6fd8; font-weight:700}
+.btn.primary:hover{filter:brightness(1.12)}
+.btn.danger{background:#5a2333; border-color:#7c3247}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.42; cursor:not-allowed; transform:none}
+.btn .cost{color:var(--warn); font-weight:700; margin-left:6px}
+.pill{display:inline-block; padding:2px 10px; border-radius:999px; font-size:.72rem; border:1px solid var(--line); color:var(--ink2)}
+
+/* ---------- tooltips ---------- */
+.tt{border-bottom:1px dotted var(--accent); cursor:help; position:relative}
+.tt:hover::after{
+  content:attr(data-tip); position:absolute; left:0; bottom:130%; z-index:50; width:260px;
+  background:#0d1430; border:1px solid var(--accent); color:var(--ink); padding:9px 11px;
+  border-radius:10px; font-size:.78rem; line-height:1.35; box-shadow:0 8px 20px rgba(0,0,0,.5);
+  white-space:normal; font-weight:400;
+}
+
+/* ---------- setup ---------- */
+.logo{font-size:1.9rem; background:linear-gradient(90deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text; background-clip:text; color:transparent}
+.setup-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; margin-top:14px}
+.seg-card{cursor:pointer; position:relative; transition:border-color .15s, transform .1s}
+.seg-card:hover{transform:translateY(-2px)}
+.seg-card.sel{border-color:var(--accent); box-shadow:0 0 0 2px var(--accent) inset}
+.seg-card h3{font-size:1.05rem; margin-bottom:2px}
+.seg-card .icon{font-size:1.6rem}
+.stat-row{display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px dashed #263259; font-size:.83rem}
+.stat-row span:first-child{color:var(--ink2)}
+.field{margin:10px 0}
+.field label{display:block; font-size:.82rem; color:var(--ink2); margin-bottom:4px}
+.field input{width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line);
+  background:#0e1633; color:var(--ink); font-size:1rem}
+.price-opts{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px}
+.price-opt{flex:1; min-width:170px; cursor:pointer}
+.price-opt.sel{border-color:var(--accent); box-shadow:0 0 0 2px var(--accent) inset}
+
+/* ---------- dashboard ---------- */
+.dash{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin:12px 0}
+.dash .card{padding:10px 14px}
+.dash .lbl{font-size:.7rem; text-transform:uppercase; letter-spacing:.8px; color:var(--muted)}
+.dash .val{font-size:1.25rem; font-weight:800; margin-top:2px}
+#cashVal.c-good{color:var(--good)} #cashVal.c-warn{color:var(--warn)} #cashVal.c-bad{color:var(--bad)}
+.meter{height:8px; background:#0d1430; border-radius:99px; overflow:hidden; margin-top:6px}
+.meter i{display:block; height:100%; background:linear-gradient(90deg,var(--bad),var(--warn),var(--good)); border-radius:99px}
+
+/* ---------- decision grid ---------- */
+.decisions{display:grid; grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); gap:14px; margin-top:14px}
+.dcard h3{display:flex; align-items:center; gap:8px; font-size:1rem; margin-bottom:8px}
+.dcard .row{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 0; border-bottom:1px dashed #223059}
+.dcard .row:last-child{border-bottom:none}
+.dcard .desc{flex:1; font-size:.83rem; color:var(--ink2)}
+.dcard .desc b{color:var(--ink)}
+qty-ctl,.qty{display:flex; align-items:center; gap:6px}
+.qty input{width:74px; text-align:center; padding:6px; border-radius:8px; border:1px solid var(--line); background:#0e1633; color:var(--ink)}
+.bills li{display:flex; justify-content:space-between; padding:3px 0; font-size:.85rem; color:var(--ink2); list-style:none}
+.owned{color:var(--good); font-size:.8rem; font-weight:700}
+
+/* ---------- header/topbar ---------- */
+.topbar{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap}
+.month-chip{font-size:1rem; font-weight:800; padding:6px 14px; border-radius:10px; background:#1d2a55; border:1px solid var(--line)}
+.season{font-size:.78rem; color:var(--warn)}
+
+/* ---------- chart ---------- */
+.chartbox{margin-top:10px}
+.chartbox svg{width:100%; height:150px; display:block}
+.chartbox text{fill:var(--muted); font-size:10px}
+.chartbox .axis{stroke:#26335f; stroke-width:1}
+.chartbox .cashline{stroke:var(--chart); stroke-width:2; fill:none; stroke-linejoin:round; stroke-linecap:round}
+.chartbox .dot{fill:var(--chart)}
+.chartbox .hover-target{fill:transparent; cursor:pointer}
+.chartbox .lastlbl{fill:var(--ink); font-weight:700; font-size:11px}
+
+/* ---------- modal ---------- */
+.modal-bg{position:fixed; inset:0; background:rgba(4,8,20,.75); display:flex; align-items:center;
+  justify-content:center; z-index:100; padding:16px; overflow:auto}
+.modal{max-width:640px; width:100%; max-height:92vh; overflow:auto}
+.modal h2{margin-bottom:10px}
+.pnl{width:100%; border-collapse:collapse; margin:8px 0}
+.pnl td{padding:5px 4px; font-size:.88rem; border-bottom:1px dashed #223059}
+.pnl td:last-child{text-align:right; font-variant-numeric:tabular-nums}
+.pnl tr.total td{border-top:2px solid var(--line); border-bottom:none; font-weight:800}
+.breakdown li{list-style:none; font-size:.85rem; color:var(--ink2); padding:3px 0}
+.breakdown b{color:var(--ink)}
+.event-card{border:1px solid var(--line); border-radius:12px; padding:12px; margin:10px 0}
+.event-card.good{border-color:var(--good)} .event-card.bad{border-color:var(--bad)} .event-card.mixed{border-color:var(--warn)}
+
+/* ---------- toasts ---------- */
+#toasts{position:fixed; right:16px; top:16px; z-index:200; display:flex; flex-direction:column; gap:8px}
+.toast{background:#111b3d; border:1px solid var(--line); border-left:4px solid var(--accent);
+  padding:10px 14px; border-radius:10px; font-size:.85rem; box-shadow:0 8px 24px rgba(0,0,0,.5);
+  animation:pop .18s ease-out; max-width:320px}
+.toast.spend{border-left-color:var(--warn)} .toast.earn{border-left-color:var(--good)} .toast.err{border-left-color:var(--bad)}
+@keyframes pop{from{transform:translateY(-8px); opacity:0} to{transform:none; opacity:1}}
+
+/* ---------- final screens ---------- */
+.score-big{font-size:3.2rem; font-weight:900; text-align:center; margin:12px 0;
+  background:linear-gradient(90deg,var(--accent),var(--accent2)); -webkit-background-clip:text; background-clip:text; color:transparent}
+.badges{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin:10px 0}
+.badge{padding:8px 14px; border-radius:12px; background:#1d2a55; border:1px solid var(--accent2); font-weight:700; font-size:.9rem}
+.timeline li{list-style:none; padding:5px 0 5px 14px; border-left:2px solid var(--line); font-size:.85rem; color:var(--ink2)}
+.debrief li{margin:10px 0 10px 18px; font-size:.92rem; line-height:1.45}
+
+/* ---------- how to play ---------- */
+details.howto{margin:10px 0}
+details.howto summary{cursor:pointer; font-weight:700; color:var(--accent)}
+details.howto .card{margin-top:8px; font-size:.88rem; line-height:1.5; color:var(--ink2)}
+details.howto b{color:var(--ink)}
+
+@media (max-width:640px){ .decisions{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     GAME ENGINE — pure logic, no DOM. (Extracted & unit-simulated
+     by tools/sim.mjs; keep this block free of document/window.)
+     ============================================================ -->
+<script id="engine">
+"use strict";
+/* ---------- seeded RNG ---------- */
+function hashStr(s){let h=1779033703^s.length;for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),3432918353);h=(h<<13)|(h>>>19);}return h>>>0;}
+function mulberry32(a){return function(){a|=0;a=(a+0x6D2B79F5)|0;let t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return ((t^(t>>>14))>>>0)/4294967296;};}
+
+const MONTH_NAMES=["January","February","March","April","May","June","July","August","September","October","November","December"];
+/* base seasonality (avg segment feels this fully) */
+const SEASON=[0.92,0.90,0.96,1.00,1.00,1.02,1.00,1.12,1.18,1.02,1.38,1.68];
+
+const SEGMENTS={
+  budget:{
+    key:"budget", icon:"🎧", name:"Budget Electronics",
+    blurb:"Off-brand accessories, refurbished phones, cheap earbuds. Volume is king; every dollar of cost matters.",
+    unitCost:25, basePrice:33, unitLabel:"item",
+    baseDemand:450, staffCap:650, staffCapTrained:720,
+    startStaff:1, staffCost:1150, trainedCost:1350,
+    rent:1000, utilities:180,
+    defectRate:0.02, seasonSens:0.55, repSens:0.5,
+    mkt:{social:0.15, local:0.18, influencer:0.10, sale:0.45},
+    priceMults:{undercut:{p:0.92,d:1.30}, match:{p:1,d:1}, premium:{p:1.10,d:0.60}},
+    startup:{license:500, deposit:1500, fixtures:1400, pos:800, initUnits:380},
+    marginNote:"~20% (before returns)", volumeNote:"~450 items/mo", riskNote:"Thin margins + product returns. Runs out of stock fast; steady demand, barely seasonal.",
+    catNames:["Phone repair parts","Prepaid SIM & top-ups"],
+    serviceName:"Phone repair counter",
+    goodScore:35000, greatScore:50000,
+  },
+  average:{
+    key:"average", icon:"📱", name:"Mainstream Electronics",
+    blurb:"Popular phones, mid-range laptops, TVs, gaming gear. The most competitive segment — marketing wins it.",
+    unitCost:250, basePrice:360, unitLabel:"unit",
+    baseDemand:34, staffCap:36, staffCapTrained:42,
+    startStaff:1, staffCost:1350, trainedCost:1550,
+    rent:1400, utilities:240,
+    defectRate:0.015, seasonSens:1.0, repSens:1.0,
+    mkt:{social:0.25, local:0.22, influencer:0.40, sale:0.25},
+    priceMults:{undercut:{p:0.92,d:1.25}, match:{p:1,d:1}, premium:{p:1.12,d:0.72}},
+    startup:{license:500, deposit:2200, fixtures:1800, pos:1000, initUnits:30},
+    marginNote:"25–30%", volumeNote:"~34 units/mo", riskNote:"Most competitive segment. Demand follows marketing and new releases; mediocre play gets squeezed.",
+    catNames:["Gaming accessories","Smart-home gadgets"],
+    serviceName:"Setup & installation desk",
+    goodScore:30000, greatScore:45000,
+  },
+  highend:{
+    key:"highend", icon:"🖥️", name:"High-End Electronics",
+    blurb:"Flagship phones, premium laptops, home theater, smart-home installs. Few sales, fat margins, loyal customers.",
+    unitCost:1150, basePrice:2050, unitLabel:"unit",
+    baseDemand:5.2, staffCap:5, staffCapTrained:7,
+    startStaff:1, staffCost:1500, trainedCost:1800,
+    rent:2000, utilities:300,
+    defectRate:0.01, seasonSens:1.15, repSens:1.2,
+    mkt:{social:0.10, local:0.12, influencer:0.25, sale:0.05},
+    priceMults:{undercut:{p:0.90,d:1.10}, match:{p:1,d:1}, premium:{p:1.06,d:0.90}},
+    startup:{license:700, deposit:3200, fixtures:3000, pos:1500, initUnits:5},
+    marginNote:"35–45%", volumeNote:"~5 units/mo", riskNote:"Each unit ties up $1,150 of cash. One slow month hurts badly. Reputation and trained staff drive demand.",
+    catNames:["Premium audio","Smart-home installs"],
+    serviceName:"White-glove install & warranty desk",
+    goodScore:35000, greatScore:65000,
+  },
+};
+
+const MARKETING={
+  none:{name:"No marketing", cost:0},
+  social:{name:"Social media ads", cost:450, desc:"Cheap reach; best for mainstream."},
+  local:{name:"Local ads (radio/flyers)", cost:650, desc:"Reliable local traffic."},
+  influencer:{name:"Influencer unboxing", cost:1300, desc:"Moves high-end product; hype for mainstream."},
+  sale:{name:"Sale event weekend", cost:800, desc:"Huge for budget volume; cheapens a high-end brand (-3 rep)."},
+};
+const IMPROVEMENTS={
+  displays:{name:"Better displays", cost:900, desc:"+5% demand permanently."},
+  demo:{name:"Demo stations", cost:1400, desc:"Let customers try products. +8% demand (+12% high-end)."},
+  security:{name:"Security upgrade", cost:1200, desc:"Cuts shrinkage (theft/loss) from 2% to 0.5% of stock monthly; blunts theft events."},
+};
+const INSURANCE_COST=180;
+const SECURITY_BASE=100;
+const SERVICE_LAUNCH=1500;
+const HIRE_FEE=400, TRAIN_COST=600, SEVERANCE=300;
+const CAT_COST=800;
+const LOAN_STEP=5000, LOAN_MAX=15000, LOAN_RATE=0.015; /* monthly interest on balance */
+const CROWD_COST=500;
+const INVESTOR_CASH=6000, INVESTOR_EQUITY=0.15;
+
+function createGame(teamName, storeName, segKey, pricing){
+  const seg=SEGMENTS[segKey];
+  const seed=hashStr(teamName+"|"+storeName+"|"+segKey);
+  const st={
+    teamName, storeName, segKey, pricing,
+    seed, _rng:mulberry32(seed),
+    month:0, phase:"decide", gameOver:false, bankrupt:false,
+    cash:20000,
+    units:seg.startup.initUnits, invCost:seg.unitCost, unitCost:seg.unitCost,
+    staff:seg.startStaff, trained:0,
+    rep:50, debt:0, borrowed:0, equity:0,
+    insurance:false, security:false, displays:false, demo:false,
+    services:false, serviceLevel:0, cats:0,
+    marketing:"none",
+    costHike:0, nextDemandBonus:0, discountStock:false, competitor:false,
+    crowdUsed:false, crowdPending:0,
+    investorRounds:0, investorLastFail:-9, investorOffer:null,
+    bulkOffer:null, bulkPending:null,
+    liquidatedThisMonth:false,
+    lastEventNeg:false, lastEventId:null, firedOnce:{},
+    monthSpend:{}, minCash:20000,
+    history:[], log:[], startupBill:null, pricingChangedFree:true,
+  };
+  /* startup purchases */
+  const su=seg.startup;
+  const inv=su.initUnits*seg.unitCost;
+  const bill=[["Business license & permits",su.license],["Store lease deposit",su.deposit],
+    ["Shelving, fixtures & security",su.fixtures],["Point-of-sale system",su.pos],
+    ["Initial inventory ("+su.initUnits+" "+seg.unitLabel+"s)",inv]];
+  const total=bill.reduce((a,b)=>a+b[1],0);
+  st.cash-=total;
+  st.startupBill={items:bill,total};
+  st.log.push({m:0,txt:"Opened "+storeName+" ("+seg.name+"). Startup costs $"+total.toLocaleString()+"."});
+  st.minCash=Math.min(st.minCash,st.cash);
+  return st;
+}
+
+function seg(st){return SEGMENTS[st.segKey];}
+function rng(st){return st._rng();}
+
+function price(st){
+  const s=seg(st);
+  let p=s.basePrice*s.priceMults[st.pricing].p;
+  if(st.discountStock) p*=0.88;
+  return p;
+}
+function staffCapacity(st){
+  const s=seg(st);
+  return (st.staff-st.trained)*s.staffCap + st.trained*s.staffCapTrained;
+}
+function loanPayment(st){
+  if(st.debt<=0) return 0;
+  const interest=st.debt*LOAN_RATE;
+  return Math.min(st.debt+interest, Math.max(500, Math.round(st.debt*0.10)+Math.round(interest)));
+}
+function burnRate(st){
+  const s=seg(st);
+  let b=s.rent+s.utilities+SECURITY_BASE;
+  b+=(st.staff-st.trained)*s.staffCost + st.trained*s.trainedCost;
+  if(st.insurance)b+=INSURANCE_COST;
+  b+=loanPayment(st);
+  return Math.round(b);
+}
+function inventoryValue(st){return Math.round(st.units*st.invCost);}
+function effUnitCost(st){
+  return Math.round(seg(st).unitCost*(st.costHike>0?1.10:1));
+}
+function seasonMult(st,m){
+  const s=seg(st);
+  return 1+(SEASON[m]-1)*s.seasonSens;
+}
+function seasonLabel(m){
+  if(m===10||m===11)return"🎄 HOLIDAY SURGE — biggest demand of the year!";
+  if(m===7||m===8)return"🎒 Back-to-school bump";
+  if(m===9)return"🎄 Holiday season starts next month — stock up NOW!";
+  if(m===6)return"Back-to-school bump starts next month";
+  if(m===0||m===1)return"❄️ Post-holiday slump — demand is soft";
+  return"Normal season";
+}
+
+/* ---------- month start: recurring bills ---------- */
+function startMonth(st){
+  const s=seg(st), lines=[];
+  st.phase="decide"; st.marketing="none"; st.liquidatedThisMonth=false;
+  st.monthSpend={};
+  const pay=loanPayment(st);
+  lines.push(["Rent",s.rent],["Payroll ("+st.staff+" staff)",(st.staff-st.trained)*s.staffCost+st.trained*s.trainedCost],
+    ["Utilities",s.utilities],["Security system",SECURITY_BASE]);
+  if(st.insurance)lines.push(["Insurance premium",INSURANCE_COST]);
+  if(pay>0){
+    const interest=Math.round(st.debt*LOAN_RATE);
+    st.debt=Math.max(0,Math.round(st.debt+interest-pay));
+    lines.push(["Loan payment (incl. $"+interest+" interest)",pay]);
+  }
+  const total=lines.reduce((a,b)=>a+b[1],0);
+  st.cash-=total;
+  st.recurring={lines,total};
+  if(st.crowdPending>0){
+    st.cash+=st.crowdPending;
+    st.log.push({m:st.month,txt:"Crowdfunding paid out $"+st.crowdPending.toLocaleString()+"."});
+    st.crowdCollected=st.crowdPending; st.crowdPending=0;
+  } else st.crowdCollected=0;
+  if(st.bulkPending){
+    st.cash+=st.bulkPending.payout;
+    st.log.push({m:st.month,txt:"Corporate bulk order delivered: +$"+st.bulkPending.payout.toLocaleString()+"."});
+    st.bulkPaid=st.bulkPending.payout; st.bulkPending=null;
+  } else st.bulkPaid=0;
+  st.minCash=Math.min(st.minCash,st.cash);
+  if(st.cash<=0){bankrupt(st,"Monthly bills of $"+total.toLocaleString()+" drained the last of the cash.");}
+  return {lines,total};
+}
+
+/* ---------- decision actions (all return {ok,msg}) ---------- */
+function spend(st,amount,label,cat){
+  if(st.gameOver)return{ok:false,msg:"Game over."};
+  if(amount>st.cash)return{ok:false,msg:"Not enough cash — that costs $"+amount.toLocaleString()+" and you have $"+Math.round(st.cash).toLocaleString()+"."};
+  st.cash-=amount;
+  st.monthSpend[cat]=(st.monthSpend[cat]||0)+amount;
+  st.log.push({m:st.month,txt:label+" (−$"+amount.toLocaleString()+")"});
+  st.minCash=Math.min(st.minCash,st.cash);
+  if(st.cash<=0){bankrupt(st,label+" spent the last of the cash.");}
+  return{ok:true};
+}
+function orderInventory(st,units){
+  units=Math.max(0,Math.round(units));
+  if(units===0)return{ok:false,msg:"Enter a quantity first."};
+  const uc=effUnitCost(st), cost=units*uc;
+  const r=spend(st,cost,"Ordered "+units+" "+seg(st).unitLabel+"s @ $"+uc,"inventory");
+  if(!r.ok)return r;
+  /* weighted-average cost basis */
+  st.invCost=(st.invCost*st.units+uc*units)/(st.units+units);
+  st.units+=units;
+  return{ok:true,msg:"Stock arrived: +"+units};
+}
+function setMarketing(st,id){
+  if(id===st.marketing)return{ok:true};
+  if(st.marketing!=="none")return{ok:false,msg:"You already booked "+MARKETING[st.marketing].name+" this month."};
+  const mk=MARKETING[id];
+  const r=spend(st,mk.cost,"Booked "+mk.name,"marketing");
+  if(!r.ok)return r;
+  st.marketing=id;
+  if(id==="sale"&&st.segKey==="highend"){st.rep=Math.max(5,st.rep-3);st.log.push({m:st.month,txt:"Discount weekend cheapened the premium brand (−3 reputation)."});}
+  return{ok:true};
+}
+function hireStaff(st){
+  const r=spend(st,HIRE_FEE,"Hired a new employee","staffing");
+  if(!r.ok)return r;
+  st.staff++;return{ok:true};
+}
+function trainStaff(st){
+  if(st.trained>=st.staff)return{ok:false,msg:"Everyone is already trained."};
+  const r=spend(st,TRAIN_COST,"Sent an employee to product training","staffing");
+  if(!r.ok)return r;
+  st.trained++;return{ok:true};
+}
+function layoffStaff(st){
+  if(st.staff<=1)return{ok:false,msg:"You need at least one employee to run the register."};
+  const r=spend(st,SEVERANCE,"Laid off an employee (severance)","staffing");
+  if(!r.ok)return r;
+  st.staff--; if(st.trained>st.staff)st.trained=st.staff;
+  st.rep=Math.max(5,st.rep-1);
+  return{ok:true};
+}
+function buyImprovement(st,id){
+  if(st[id])return{ok:false,msg:"Already installed."};
+  const im=IMPROVEMENTS[id];
+  const r=spend(st,im.cost,"Installed "+im.name.toLowerCase(),"improvements");
+  if(!r.ok)return r;
+  st[id]=true;return{ok:true};
+}
+function launchServices(st){
+  if(st.services)return{ok:false,msg:"Already running."};
+  const r=spend(st,SERVICE_LAUNCH,"Launched "+seg(st).serviceName.toLowerCase(),"services");
+  if(!r.ok)return r;
+  st.services=true;st.serviceLevel=500;return{ok:true};
+}
+function addCategory(st){
+  if(st.cats>=2)return{ok:false,msg:"You already carry both adjacent categories."};
+  const name=seg(st).catNames[st.cats];
+  const r=spend(st,CAT_COST,"Added product line: "+name,"inventory");
+  if(!r.ok)return r;
+  st.cats++;return{ok:true,msg:name+" added — +10% base demand."};
+}
+function setInsurance(st,on){
+  if(on===st.insurance)return{ok:true};
+  st.insurance=on;
+  st.log.push({m:st.month,txt:on?"Bought business insurance ($"+INSURANCE_COST+"/mo).":"Cancelled insurance."});
+  return{ok:true};
+}
+function setPricing(st,p){
+  if(p===st.pricing)return{ok:true};
+  if(st.segKey==="highend"&&p==="undercut"){
+    st.rep=Math.max(5,st.rep-6);
+    st.log.push({m:st.month,txt:"Slashed prices — premium reputation took a −6 hit."});
+  }
+  st.pricing=p;
+  st.log.push({m:st.month,txt:"Pricing strategy → "+p+"."});
+  return{ok:true};
+}
+/* ---------- fundraising ---------- */
+function takeLoan(st){
+  if(st.borrowed+LOAN_STEP>LOAN_MAX)return{ok:false,msg:"The bank won't lend beyond $"+LOAN_MAX.toLocaleString()+" total."};
+  st.borrowed+=LOAN_STEP;st.debt+=LOAN_STEP;st.cash+=LOAN_STEP;
+  st.log.push({m:st.month,txt:"Took a $"+LOAN_STEP.toLocaleString()+" bank loan (1.5%/mo interest)."});
+  return{ok:true,msg:"+$5,000 cash. Monthly payments start next month."};
+}
+function investorQuestions(st){
+  const s=seg(st);
+  const burn=burnRate(st);
+  const margin=Math.round((1-s.unitCost/price(st))*100);
+  const runway=Math.max(0,Math.floor(st.cash/Math.max(1,burn)));
+  function opts(correct,fmt){
+    const set=[correct,Math.round(correct*0.6),Math.round(correct*1.5)];
+    /* deterministic shuffle by seed+month */
+    const r=mulberry32(st.seed+st.month*7)();
+    if(r>0.66)set.push(set.shift());else if(r>0.33)set.unshift(set.pop());
+    return set.map(v=>({v,label:fmt(v),correct:v===correct}));
+  }
+  return[
+    {q:"What is your monthly burn rate (recurring costs)?",opts:opts(burn,v=>"$"+v.toLocaleString())},
+    {q:"What is your gross margin per sale right now?",opts:opts(margin,v=>v+"%")},
+    {q:"At current burn, how many months of runway does your cash cover?",opts:opts(Math.max(1,runway),v=>v+" month"+(v===1?"":"s"))},
+  ];
+}
+function pitchInvestor(st,correctCount){
+  if(st.investorRounds>=2)return{ok:false,msg:"Investors are tapped out (max 2 rounds)."};
+  if(st.month-st.investorLastFail<2)return{ok:false,msg:"Investors want to see progress — try again in a month or two."};
+  if(correctCount>=2){
+    st.cash+=INVESTOR_CASH;st.equity+=INVESTOR_EQUITY;st.investorRounds++;
+    st.log.push({m:st.month,txt:"Investor pitch succeeded: +$"+INVESTOR_CASH.toLocaleString()+" for "+(INVESTOR_EQUITY*100)+"% equity."});
+    return{ok:true,success:true,msg:"They're in! +$6,000 for 15% of the company."};
+  }
+  st.investorLastFail=st.month;
+  st.log.push({m:st.month,txt:"Investor pitch failed — you didn't know your own numbers."});
+  return{ok:true,success:false,msg:"They passed. Know your numbers and try again later."};
+}
+function runCrowdfunding(st){
+  if(st.crowdUsed)return{ok:false,msg:"You already ran your one campaign."};
+  const r=spend(st,CROWD_COST,"Launched crowdfunding campaign","fundraising");
+  if(!r.ok)return r;
+  st.crowdUsed=true;
+  const roll=rng(st);
+  st.crowdPending=Math.round((500+roll*3800)*(0.5+st.rep/100));
+  return{ok:true,msg:"Campaign live — backers pay out at the start of next month."};
+}
+function liquidate(st){
+  if(st.liquidatedThisMonth)return{ok:false,msg:"You already ran a lot sale this month."};
+  const sell=Math.floor(st.units*0.3);
+  if(sell<1)return{ok:false,msg:"Not enough stock to liquidate."};
+  const cashIn=Math.round(sell*st.invCost*0.7);
+  st.units-=sell;st.cash+=cashIn;st.liquidatedThisMonth=true;
+  st.rep=Math.max(5,st.rep-1);
+  st.log.push({m:st.month,txt:"Parking-lot liquidation: sold "+sell+" units below cost for $"+cashIn.toLocaleString()+" (−1 rep)."});
+  return{ok:true,msg:"+$"+cashIn.toLocaleString()+" cash, −"+sell+" units (sold below cost)."};
+}
+function acceptBulkOrder(st){
+  const o=st.bulkOffer;
+  if(!o)return{ok:false,msg:"No offer on the table."};
+  const cost=o.units*effUnitCost(st);
+  const r=spend(st,cost,"Bought "+o.units+" units for the corporate bulk order","inventory");
+  if(!r.ok)return r;
+  st.bulkPending={payout:o.payout};
+  st.bulkOffer=null;
+  return{ok:true,msg:"Deal! $"+o.payout.toLocaleString()+" lands at the start of next month."};
+}
+function declineBulkOrder(st){st.bulkOffer=null;return{ok:true};}
+
+/* ---------- month end: revenue + event ---------- */
+function endMonth(st){
+  if(st.gameOver)return null;
+  const s=seg(st);
+  const m=st.month;
+  const rep=st.rep;
+  /* demand factors (fixed order for determinism) */
+  const base=s.baseDemand*(1+0.10*st.cats);
+  const season=seasonMult(st,m);
+  const pf=s.priceMults[st.pricing].d;
+  const mk=st.marketing!=="none"?1+s.mkt[st.marketing]:1;
+  const rf=Math.max(0.3,1+(rep-50)/100*s.repSens);
+  const impf=1+(st.displays?0.05:0)+(st.demo?(st.segKey==="highend"?0.12:0.08):0);
+  const evf=(1+st.nextDemandBonus)*(st.competitor?(st.segKey==="average"?0.85:0.92):1);
+  const luck=0.85+rng(st)*0.30;
+  const demand=Math.round(base*season*pf*mk*rf*impf*evf*luck);
+  const cap=Math.round(staffCapacity(st));
+  const sold=Math.min(demand,st.units,cap);
+  const p=price(st);
+  const revenue=Math.round(sold*p);
+  const returns=Math.round(revenue*s.defectRate);
+  let serviceRev=0;
+  if(st.services){
+    serviceRev=Math.round(st.serviceLevel*(0.7+rep/100*0.6));
+    st.serviceLevel=Math.min(1100,st.serviceLevel+75);
+  }
+  const cogs=Math.round(sold*st.invCost);
+  st.units-=sold;
+  /* shrinkage */
+  const shrinkPct=st.security?0.005:0.02;
+  const shrunk=Math.floor(st.units*shrinkPct + (rng(st)<(st.units*shrinkPct%1)?1:0));
+  const shrinkCost=Math.round(shrunk*st.invCost);
+  st.units-=shrunk;
+  st.cash+=revenue-returns+serviceRev;
+  /* reputation drift */
+  let repNotes=[];
+  if(demand>0&&sold<demand*0.8){const hit=st.segKey==="budget"?1:2;st.rep-=hit;repNotes.push("Customers left empty-handed (stockout) −"+hit);}
+  if(st.segKey==="budget"){st.rep-=0.3;repNotes.push("Cheap-product returns −0.3");}
+  if(st.trained>0){const g=st.segKey==="highend"?1.0:0.8;st.rep+=g*Math.min(st.trained,2);repNotes.push("Trained staff +"+(g*Math.min(st.trained,2)).toFixed(1));}
+  if(st.services){st.rep+=0.5;repNotes.push("Service desk +0.5");}
+  if(st.segKey==="highend"&&st.pricing==="premium"){st.rep+=0.5;repNotes.push("Premium positioning +0.5");}
+  if(st.segKey==="highend"&&st.pricing==="undercut"){st.rep-=2;repNotes.push("Discounting the brand −2");}
+  st.rep=Math.max(5,Math.min(95,st.rep));
+  /* clear one-month modifiers */
+  const usedBonus=st.nextDemandBonus;st.nextDemandBonus=0;
+  const wasDiscounted=st.discountStock;st.discountStock=false;
+  if(st.costHike>0)st.costHike--;
+  /* P&L */
+  const spent=st.monthSpend;
+  const opEx=(st.recurring?st.recurring.total:0)
+    +(spent.marketing||0)+(spent.staffing||0)+(spent.improvements||0)
+    +(spent.services||0)+(spent.fundraising||0);
+  const profit=revenue-returns+serviceRev-cogs-opEx-shrinkCost;
+  const report={
+    month:m, demand, sold, cap, unitsLeft:st.units, price:Math.round(p),
+    revenue, returns, serviceRev, cogs, shrinkCost, shrunk,
+    opEx, profit,
+    factors:{base:Math.round(base),season,pf,mk,rf,impf,evf:evf*(1),luck,usedBonus,wasDiscounted},
+    repNotes, event:null,
+  };
+  /* random event */
+  report.event=maybeEvent(st);
+  st.minCash=Math.min(st.minCash,st.cash);
+  st.history.push({m,revenue:revenue-returns+serviceRev,cogs:cogs+shrinkCost,opEx,profit,cashEnd:Math.round(st.cash),
+    invValue:inventoryValue(st),sold,demand,rep:Math.round(st.rep)});
+  if(st.cash<=0&&!st.gameOver){bankrupt(st,"Month-end losses wiped out the cash.");}
+  else if(m===11){st.gameOver=true;st.phase="won";}
+  else{st.month++;st.phase="bills";}
+  return report;
+}
+
+/* ---------- events ---------- */
+const EVENTS=[
+  {id:"release",w:3,neg:false,kind:"mixed",title:"📦 Major new model release!",
+   can:st=>st.units>0,
+   apply(st){st.discountStock=true;st.nextDemandBonus+=0.25;
+     return"A hot new flagship just launched. Your current stock is last-gen — next month it sells at a 12% discount, but launch hype brings +25% foot traffic.";}},
+  {id:"theft",w:2,neg:true,kind:"bad",title:"🚨 Shoplifting incident",
+   can:st=>st.units>2,
+   apply(st){const pct=st.security?0.02:0.10;const lost=Math.max(1,Math.floor(st.units*pct));
+     st.units-=lost;const val=Math.round(lost*st.invCost);let txt="Thieves hit the store overnight: "+lost+" units gone ($"+val.toLocaleString()+" of stock).";
+     if(st.security)txt+=" Your security upgrade kept the damage small.";
+     if(st.insurance){const back=Math.round(val*0.8);st.cash+=back;txt+=" Insurance reimbursed $"+back.toLocaleString()+".";}
+     return txt;}},
+  {id:"recall",w:2,neg:true,kind:"bad",title:"⚠️ Product recall",
+   can:st=>st.units>3,
+   apply(st){const lost=Math.max(1,Math.floor(st.units*0.06));st.units-=lost;
+     const val=Math.round(lost*st.invCost);
+     st.rep=Math.max(5,st.rep-(st.insurance?2:4));
+     let txt="A supplier recalled an item you stock. "+lost+" units pulled from shelves ($"+val.toLocaleString()+"). Reputation −"+(st.insurance?2:4)+".";
+     if(st.insurance){const back=Math.round(val*0.6);st.cash+=back;txt+=" Insurance covered $"+back.toLocaleString()+".";}
+     return txt;}},
+  {id:"hike",w:2,neg:true,kind:"bad",title:"📈 Supplier price hike",
+   can:st=>true,
+   apply(st){st.costHike=2;return"A component shortage pushed wholesale prices up 10% for the next 2 months. Restocking just got expensive.";}},
+  {id:"bigbox",w:1.5,neg:true,kind:"bad",title:"🏬 Big-box competitor opens nearby",
+   can:st=>!st.competitor&&st.month>=4,once:true,
+   apply(st){st.competitor=true;
+     const hit=st.segKey==="average"?"15%":"8%";
+     return"A national chain opened two blocks away. Demand drops "+hit+" for the rest of the year. Differentiate or die.";}},
+  {id:"viral",w:2,neg:false,kind:"good",title:"🌟 Viral review!",
+   can:st=>true,
+   apply(st){st.rep=Math.min(95,st.rep+6);st.nextDemandBonus+=0.25;
+     return"A local creator's glowing review of your store blew up. Reputation +6 and +25% traffic next month.";}},
+  {id:"bulk",w:2,neg:false,kind:"good",title:"💼 Corporate bulk-order opportunity",
+   can:st=>!st.bulkPending&&!st.bulkOffer,
+   apply(st){const s=seg(st);const units=st.segKey==="budget"?150:(st.segKey==="average"?10:3);
+     const cost=units*effUnitCost(st);const payout=Math.round(units*s.basePrice*1.10);
+     st.bulkOffer={units,cost,payout};
+     return"A local company wants "+units+" units next month. Buy the stock now for ~$"+cost.toLocaleString()+" and they'll pay $"+payout.toLocaleString()+" — decide in next month's turn.";}},
+  {id:"poach",w:1.5,neg:true,kind:"bad",title:"🏃 Key employee poached",
+   can:st=>st.staff>=2||st.trained>=1,
+   apply(st){if(st.trained>0){st.trained--;st.staff=Math.max(1,st.staff-1);}else st.staff=Math.max(1,st.staff-1);
+     st.rep=Math.max(5,st.rep-2);
+     return"A competitor hired away one of your best people. Staff −1, reputation −2. Regulars notice.";}},
+  {id:"expo",w:1.5,neg:false,kind:"good",title:"🎪 Tech expo comes to town",
+   can:st=>true,
+   apply(st){st.nextDemandBonus+=0.15;return"A regional tech expo is bringing gadget lovers downtown next month: +15% traffic.";}},
+];
+function maybeEvent(st){
+  const roll=rng(st);
+  const m=st.month;
+  if(m===0)return null;                       /* quiet first month */
+  if(roll>0.45)return null;
+  let pool=EVENTS.filter(e=>(!e.once||!st.firedOnce[e.id])&&e.id!==st.lastEventId&&e.can(st));
+  if(m<=2)pool=pool.filter(e=>!e.neg);        /* no negative events in months 1–3 */
+  else if(m<=4&&st.lastEventNeg)pool=pool.filter(e=>!e.neg); /* no back-to-back neg early */
+  if(!pool.length)return null;
+  const tw=pool.reduce((a,e)=>a+e.w,0);
+  let r=rng(st)*tw,ev=pool[0];
+  for(const e of pool){r-=e.w;if(r<=0){ev=e;break;}}
+  const desc=ev.apply(st);
+  st.lastEventNeg=ev.neg;st.lastEventId=ev.id;
+  if(ev.once)st.firedOnce[ev.id]=true;
+  st.log.push({m,txt:"EVENT — "+ev.title.replace(/^\S+\s/,"")+": "+desc});
+  st.minCash=Math.min(st.minCash,st.cash);
+  return{title:ev.title,desc,kind:ev.kind};
+}
+
+function bankrupt(st,why){
+  st.gameOver=true;st.bankrupt=true;st.phase="bankrupt";
+  st.bankruptWhy=why;
+  st.log.push({m:st.month,txt:"💀 BANKRUPT — "+why});
+}
+
+/* ---------- scoring ---------- */
+function finalScore(st){
+  const h=st.history;
+  const last3=h.slice(-3);
+  const avg3=last3.length?Math.round(last3.reduce((a,r)=>a+r.profit,0)/last3.length):0;
+  const inv=Math.round(inventoryValue(st)*0.6);
+  const su=seg(st).startup;
+  let assets=Math.round((su.fixtures+su.pos)*0.4);
+  if(st.displays)assets+=IMPROVEMENTS.displays.cost*0.5;
+  if(st.demo)assets+=IMPROVEMENTS.demo.cost*0.5;
+  if(st.security)assets+=IMPROVEMENTS.security.cost*0.5;
+  if(st.services)assets+=SERVICE_LAUNCH*0.5;
+  assets=Math.round(assets);
+  const raw=st.cash+avg3*10+inv+assets-st.debt;
+  const val=Math.max(0,Math.round(raw*(1-st.equity)));
+  return{cash:Math.round(st.cash),avg3,profitComponent:avg3*10,inv,assets,debt:Math.round(st.debt),
+    equity:st.equity,raw:Math.round(raw),valuation:val};
+}
+function badges(st,score){
+  const h=st.history,out=[];
+  const holiday=h.filter(r=>r.m===10||r.m===11).reduce((a,r)=>a+r.revenue,0);
+  const total=h.reduce((a,r)=>a+r.revenue,0)||1;
+  const profMonths=h.filter(r=>r.profit>0).length;
+  const avgInv=h.reduce((a,r)=>a+r.invValue,0)/Math.max(1,h.length);
+  const avgCogs=h.reduce((a,r)=>a+r.cogs,0)/Math.max(1,h.length);
+  if(!st.bankrupt){
+    if(holiday/total>0.34)out.push("🎄 Holiday Hero");
+    if(profMonths>=8)out.push("📈 Lean and Profitable");
+    if(avgCogs>0&&avgInv>2.6*avgCogs)out.push("📦 Inventory Hoarder");
+    if(st.minCash<1000)out.push("😅 Barely Survived");
+    if(st.borrowed===0&&st.equity===0)out.push("🦅 Bootstrapped");
+    if(st.rep>=75)out.push("⭐ Reputation Star");
+    if(st.equity>=0.30)out.push("🤝 Investor Darling");
+    if(profMonths<=3&&score.valuation>0)out.push("🎢 Wild Ride");
+    if(!out.length)out.push("🏪 Open for Business");
+  }
+  return out.slice(0,3);
+}
+function segmentNote(st,score){
+  const s=seg(st);const v=score.valuation;
+  const tier=v>=s.greatScore?"Top-tier":v>=s.goodScore?"Strong":v>=20000?"Solid":"Rough";
+  const map={budget:"Budget",average:"Mainstream",highend:"High-End"};
+  return tier+" result for a "+map[st.segKey]+" store. (Segments have different economics — "+
+    (st.segKey==="budget"?"budget stores grind out thin margins on volume."
+    :st.segKey==="average"?"mainstream stores fight the most competition."
+    :"high-end stores ride fewer, bigger, riskier sales.")+")";
+}
+function debriefQuestions(st){
+  const h=st.history,q=[];
+  const nov=h.find(r=>r.m===10);
+  if(nov&&nov.demand>nov.sold*1.2)
+    q.push("You entered the holiday surge in November with only "+((nov.sold===0)?"no":nov.sold+" units of")+" sellable stock while "+nov.demand+" customers wanted to buy. What would you order differently in September–October?");
+  const hoard=h.find(r=>r.invValue>3*Math.max(1,r.cogs)&&r.invValue>6000);
+  if(hoard)q.push("In "+MONTH_NAMES[hoard.m]+" you held $"+hoard.invValue.toLocaleString()+" of unsold inventory. That cash earned nothing sitting on shelves — what was the opportunity cost?");
+  if(st.minCash<1500&&!st.bankrupt)
+    q.push("Your cash dropped to $"+Math.max(0,Math.round(st.minCash)).toLocaleString()+" at its lowest point. What decision put you there, and what buffer would you keep next time?");
+  if(st.bankrupt)
+    q.push("Look at the three biggest cash drains above. Which one was avoidable, and what early-warning sign did you miss?");
+  const mkt=h.length&&st.log.filter(l=>l.txt.startsWith("Booked")).length;
+  if(mkt===0)q.push("You never spent a dollar on marketing. Demand responds to it — how much revenue do you think you left on the table?");
+  if(st.equity>0)q.push("You gave away "+(st.equity*100)+"% equity, which cut your final valuation by that share. Was the investor cash worth it — did it fund growth or just cover losses?");
+  if(st.borrowed>0&&st.debt>0)q.push("You still owe the bank $"+Math.round(st.debt).toLocaleString()+". Did the loan generate more profit than it cost in interest?");
+  q.push("If you replayed this exact year, what is the ONE decision you'd change first — and roughly how much was it worth?");
+  return q.slice(0,4);
+}
+function biggestDrains(st){
+  /* aggregate outflows by category for bankruptcy recap */
+  const cats={};
+  for(const l of st.log){
+    const m=l.txt.match(/\(−\$([\d,]+)\)/);
+    if(m){const amt=+m[1].replace(/,/g,"");
+      let cat="Other spending";
+      if(/Ordered|bulk order|product line/i.test(l.txt))cat="Inventory purchases";
+      else if(/Booked/.test(l.txt))cat="Marketing";
+      else if(/Hired|training|Laid off/.test(l.txt))cat="Staffing";
+      else if(/Installed|Launched/.test(l.txt))cat="Improvements & services";
+      cats[cat]=(cats[cat]||0)+amt;}
+  }
+  const rec=st.history.reduce((a,r)=>a+r.opEx,0)+(st.recurring?st.recurring.total:0);
+  cats["Recurring costs (rent, payroll, bills)"]=rec;
+  return Object.entries(cats).sort((a,b)=>b[1]-a[1]).slice(0,3);
+}
+</script>
+
+<!-- ============================================================ UI ==== -->
+<div class="wrap" id="app"></div>
+<div id="toasts"></div>
+
+<script id="ui">
+"use strict";
+let G=null; /* game state */
+const $=s=>document.querySelector(s);
+const fmt=n=>"$"+Math.round(n).toLocaleString();
+const app=document.getElementById("app");
+
+function toast(msg,cls){
+  const t=document.createElement("div");t.className="toast "+(cls||"");t.textContent=msg;
+  document.getElementById("toasts").appendChild(t);
+  setTimeout(()=>t.remove(),3600);
+}
+window.addEventListener("beforeunload",e=>{
+  if(G&&!G.gameOver){e.preventDefault();e.returnValue="Your game will be lost if you leave!";}
+});
+
+/* low-cash warning helper */
+function warnIfTight(cost){
+  if(!G)return"";
+  const burn=burnRate(G);
+  const left=G.cash-cost;
+  if(left<burn&&left>0)
+    return"⚠️ This leaves you with "+fmt(left)+" — your monthly costs are "+fmt(burn)+".";
+  return"";
+}
+/* confirm modal for purchases > $2,000 */
+function confirmSpend(label,cost,fn){
+  if(cost<=2000){fn();return;}
+  const w=warnIfTight(cost);
+  openModal(`
+    <h2>Confirm purchase</h2>
+    <p style="margin:8px 0">${label} for <b class="warn">${fmt(cost)}</b>?</p>
+    ${w?`<p class="warn" style="margin:8px 0">${w}</p>`:""}
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn primary" id="cfYes">Yes, spend ${fmt(cost)}</button>
+      <button class="btn" id="cfNo">Cancel</button>
+    </div>`);
+  $("#cfYes").onclick=()=>{closeModal();fn();};
+  $("#cfNo").onclick=closeModal;
+}
+function openModal(html){
+  closeModal();
+  const bg=document.createElement("div");bg.className="modal-bg";bg.id="modalbg";
+  bg.innerHTML=`<div class="card modal">${html}</div>`;
+  document.body.appendChild(bg);
+}
+function closeModal(){const m=$("#modalbg");if(m)m.remove();}
+
+function act(fn,label){
+  const r=fn();
+  if(!r.ok){toast(r.msg,"err");return;}
+  if(r.msg)toast(r.msg,label==="earn"?"earn":"spend");
+  if(G.bankrupt){renderBankrupt();return;}
+  renderGame();
+}
+
+/* ================= SETUP SCREEN ================= */
+let setupSel={seg:null,pricing:"match"};
+function renderSetup(){
+  G=null;setupSel={seg:null,pricing:"match"};
+  const segCards=Object.values(SEGMENTS).map(s=>{
+    const su=s.startup;const inv=su.initUnits*s.unitCost;
+    const total=su.license+su.deposit+su.fixtures+su.pos+inv;
+    return`<div class="card seg-card" data-seg="${s.key}">
+      <div class="icon">${s.icon}</div><h3>${s.name}</h3>
+      <p class="small" style="margin:6px 0">${s.blurb}</p>
+      <div class="stat-row"><span>Cost per ${s.unitLabel}</span><b>${fmt(s.unitCost)}</b></div>
+      <div class="stat-row"><span>Typical price</span><b>${fmt(s.basePrice)}</b></div>
+      <div class="stat-row"><span><span class="tt" data-tip="Margin = (price − cost) ÷ price. The slice of each sale you keep before expenses.">Margin</span></span><b>${s.marginNote}</b></div>
+      <div class="stat-row"><span>Sales volume</span><b>${s.volumeNote}</b></div>
+      <div class="stat-row"><span>Startup costs</span><b>${fmt(total)}</b></div>
+      <div class="stat-row"><span>Cash left after setup</span><b class="${20000-total>5000?'good':'warn'}">${fmt(20000-total)}</b></div>
+      <p class="tiny" style="margin-top:8px">⚠️ ${s.riskNote}</p>
+    </div>`;}).join("");
+  app.innerHTML=`
+    <h1 class="logo">⚡ Circuit Startup</h1>
+    <p class="small">Start an electronics store with <b>$20,000</b>. Survive 12 months. Build the most valuable business in the class.</p>
+    ${howToPlay()}
+    <div class="card" style="margin-top:12px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="field"><label>Team name</label><input id="teamName" maxlength="24" placeholder="e.g. The Margin Callers"></div>
+        <div class="field"><label>Store name</label><input id="storeName" maxlength="24" placeholder="e.g. Volt & Bolt"></div>
+      </div>
+    </div>
+    <h2 style="margin-top:16px">1 · Choose your market segment</h2>
+    <p class="small">This is your central strategic choice — each has completely different economics.</p>
+    <div class="setup-grid">${segCards}</div>
+    <h2 style="margin-top:18px">2 · Set your pricing strategy <span class="tiny">(free to change later, but demand reacts)</span></h2>
+    <div class="price-opts">
+      <div class="card price-opt" data-p="undercut"><b>🔻 Undercut competitors</b><p class="small">Lower prices, more customers, thinner margins.</p></div>
+      <div class="card price-opt sel" data-p="match"><b>⚖️ Match the market</b><p class="small">Balanced price and demand.</p></div>
+      <div class="card price-opt" data-p="premium"><b>💎 Premium pricing</b><p class="small">Higher margins, fewer customers. Suits high-end.</p></div>
+    </div>
+    <div style="margin-top:18px;text-align:center">
+      <button class="btn primary" id="startBtn" style="font-size:1.1rem;padding:12px 30px">🚀 Open Your Store</button>
+    </div>`;
+  document.querySelectorAll(".seg-card").forEach(el=>el.onclick=()=>{
+    document.querySelectorAll(".seg-card").forEach(x=>x.classList.remove("sel"));
+    el.classList.add("sel");setupSel.seg=el.dataset.seg;});
+  document.querySelectorAll(".price-opt").forEach(el=>el.onclick=()=>{
+    document.querySelectorAll(".price-opt").forEach(x=>x.classList.remove("sel"));
+    el.classList.add("sel");setupSel.pricing=el.dataset.p;});
+  $("#startBtn").onclick=()=>{
+    const t=$("#teamName").value.trim(),s=$("#storeName").value.trim();
+    if(!t||!s){toast("Enter a team name and a store name first.","err");return;}
+    if(!setupSel.seg){toast("Pick a market segment first.","err");return;}
+    G=createGame(t,s,setupSel.seg,setupSel.pricing);
+    const bill=G.startupBill;
+    openModal(`
+      <h2>🧾 Startup purchases</h2>
+      <p class="small">These deduct immediately — everything costs money.</p>
+      <table class="pnl">${bill.items.map(i=>`<tr><td>${i[0]}</td><td class="bad">−${fmt(i[1])}</td></tr>`).join("")}
+      <tr class="total"><td>Total</td><td class="bad">−${fmt(bill.total)}</td></tr>
+      <tr class="total"><td>Cash remaining</td><td class="${G.cash>5000?'good':'warn'}">${fmt(G.cash)}</td></tr></table>
+      <button class="btn primary" id="beginBtn" style="margin-top:10px;width:100%">Begin January →</button>`);
+    $("#beginBtn").onclick=()=>{closeModal();startMonth(G);if(G.bankrupt){renderBankrupt();return;}showBills();};
+  };
+}
+function howToPlay(){
+  return`<details class="howto"><summary>❔ How to Play (click to expand)</summary>
+  <div class="card">
+    <p><b>Goal:</b> survive 12 monthly turns and finish with the highest <span class="tt" data-tip="Business valuation = cash + (avg. of last 3 months' profit × 10) + inventory & asset value − debt, reduced by any equity you gave away.">business valuation</span>. If cash ever hits $0, you're bankrupt — game over, no restarts.</p>
+    <p style="margin-top:6px"><b>Each month:</b> ① your recurring bills auto-deduct (doing nothing still burns cash) → ② make decisions: restock inventory, market, staff up, improve the store, raise money → ③ open the doors: revenue resolves and a random event may hit → ④ read your mini P&L and continue.</p>
+    <p style="margin-top:6px"><b>Key terms:</b>
+      <span class="tt" data-tip="Burn rate: the recurring cash your business consumes every month (rent, payroll, utilities, insurance, loan payments) before selling anything.">burn rate</span> ·
+      <span class="tt" data-tip="Cost of goods sold: what YOU paid for the items you sold this month. Revenue − COGS = gross profit.">COGS</span> ·
+      <span class="tt" data-tip="Margin: the % of each sale you keep after paying for the product. High-end ≈ 40%, budget ≈ 20%.">margin</span> ·
+      <span class="tt" data-tip="Inventory turnover: how fast stock converts to sales. Unsold stock is cash trapped on a shelf.">inventory turnover</span> ·
+      <span class="tt" data-tip="Shrinkage: inventory lost to theft and damage — about 2%/month unless you upgrade security.">shrinkage</span> ·
+      <span class="tt" data-tip="Equity: ownership share. Investor cash is not free — the % you give away multiplies down your final score.">equity</span>.</p>
+    <p style="margin-top:6px"><b>Seasonality:</b> August–September brings a back-to-school bump; <b>November–December is the holiday surge</b> — the year's biggest opportunity. Stock up ahead of it or watch customers walk out.</p>
+    <p style="margin-top:6px"><b>Tips:</b> keep at least one month of burn in cash · stock ahead of demand, not behind it · match marketing to your segment · watch the warning when a purchase leaves you thin.</p>
+  </div></details>`;
+}
+
+/* ================= BILLS SCREEN (month start) ================= */
+function showBills(){
+  const rec=G.recurring;
+  const extra=[];
+  if(G.crowdCollected)extra.push(`<tr><td>🎉 Crowdfunding payout</td><td class="good">+${fmt(G.crowdCollected)}</td></tr>`);
+  if(G.bulkPaid)extra.push(`<tr><td>💼 Corporate bulk order paid</td><td class="good">+${fmt(G.bulkPaid)}</td></tr>`);
+  openModal(`
+    <h2>📆 ${MONTH_NAMES[G.month]} — bills are due</h2>
+    <p class="small">Recurring costs auto-deduct before you make any decision. Doing nothing still burns cash.</p>
+    <table class="pnl">${rec.lines.map(l=>`<tr><td>${l[0]}</td><td class="bad">−${fmt(l[1])}</td></tr>`).join("")}
+    ${extra.join("")}
+    <tr class="total"><td>Cash after bills</td><td class="${G.cash>burnRate(G)?'good':'bad'}">${fmt(G.cash)}</td></tr></table>
+    <button class="btn primary" id="okBills" style="width:100%;margin-top:8px">Plan the month →</button>`);
+  $("#okBills").onclick=()=>{closeModal();renderGame();};
+}
+
+/* ================= MAIN GAME SCREEN ================= */
+function renderGame(){
+  if(!G)return;
+  const s=SEGMENTS[G.segKey];
+  const burn=burnRate(G);
+  const cashCls=G.cash>10000?"c-good":G.cash>=3000?"c-warn":"c-bad";
+  const uc=effUnitCost(G);
+  const mk=G.marketing;
+  app.innerHTML=`
+  <div class="topbar">
+    <div><h1 style="font-size:1.3rem">${s.icon} ${G.storeName}</h1>
+      <span class="tiny">Team ${G.teamName} · ${s.name} · ${G.pricing} pricing</span></div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="month-chip">📅 Month ${G.month+1} / 12 · ${MONTH_NAMES[G.month]}</span>
+      <button class="btn ghost" id="newGame">↻ New Game</button>
+    </div>
+  </div>
+  <div class="season" style="margin:4px 0 0">${seasonLabel(G.month)}</div>
+  <div class="dash">
+    <div class="card"><div class="lbl">Cash</div><div class="val money"><span class="${cashCls}" id="cashVal">${fmt(G.cash)}</span></div></div>
+    <div class="card"><div class="lbl"><span class="tt" data-tip="Your recurring monthly costs: rent, payroll, utilities, security, insurance, loan payments. This deducts automatically every month.">Monthly burn</span></div><div class="val money">${fmt(burn)}</div></div>
+    <div class="card"><div class="lbl">Inventory</div><div class="val money">${G.units} <span class="tiny">${s.unitLabel}s</span></div><div class="tiny">${fmt(inventoryValue(G))} tied up in stock</div></div>
+    <div class="card"><div class="lbl">Reputation</div><div class="val">${Math.round(G.rep)}<span class="tiny">/100</span></div><div class="meter"><i style="width:${G.rep}%"></i></div></div>
+    <div class="card"><div class="lbl">Debt / Equity</div><div class="val money">${fmt(G.debt)}</div><div class="tiny">${(G.equity*100).toFixed(0)}% equity given away</div></div>
+  </div>
+  <div class="card chartbox"><div class="lbl tiny" style="text-transform:uppercase;letter-spacing:.8px">Cash over time</div>${cashChart()}</div>
+  ${howToPlay()}
+  <div class="decisions">
+    <div class="card dcard">
+      <h3>📦 Inventory <span class="pill">${G.units} in stock</span></h3>
+      <div class="row"><div class="desc">Restock @ <b>${fmt(uc)}</b>/${s.unitLabel}${G.costHike?' <span class="warn">(supplier hike!)</span>':""}.
+        Sell price ≈ <b>${fmt(price(G))}</b>. Last month's demand: <b>${G.history.length?G.history[G.history.length-1].demand:"?"}</b></div>
+        <div class="qty"><input type="number" id="ordQty" min="0" step="${G.segKey==='budget'?50:1}" value="${suggestOrder()}">
+        <button class="btn" id="ordBtn">Order</button></div></div>
+      <div class="row"><div class="desc">Diversify: <b>${G.cats<2?s.catNames[G.cats]:"—"}</b> (+10% base demand, permanent)</div>
+        ${G.cats>=2?'<span class="owned">✓ Both added</span>':`<button class="btn" id="catBtn">Add<span class="cost">${fmt(CAT_COST)}</span></button>`}</div>
+      <div class="row"><div class="desc"><span class="tt" data-tip="Sell 30% of your stock at 70% of what you paid — losing money per unit, but turning shelf-stock into cash immediately.">Parking-lot liquidation sale</span> — quick cash below cost</div>
+        <button class="btn" id="liqBtn" ${G.units<4||G.liquidatedThisMonth?"disabled":""}>Liquidate 30%</button></div>
+    </div>
+    <div class="card dcard">
+      <h3>📣 Marketing <span class="pill">${mk==="none"?"none booked":MARKETING[mk].name}</span></h3>
+      ${["social","local","influencer","sale"].map(id=>{
+        const m=MARKETING[id];const eff=Math.round(s.mkt[id]*100);
+        return`<div class="row"><div class="desc"><b>${m.name}</b> — +${eff}% demand this month. <span class="tiny">${m.desc}</span></div>
+        <button class="btn" data-mkt="${id}" ${mk!=="none"?"disabled":""}>Book<span class="cost">${fmt(m.cost)}</span></button></div>`;}).join("")}
+    </div>
+    <div class="card dcard">
+      <h3>🧑‍💼 Staffing <span class="pill">${G.staff} staff · ${G.trained} trained</span></h3>
+      <div class="row"><div class="desc">Capacity: <b>${Math.round(staffCapacity(G))}</b> sales/mo. Salary ${fmt(s.staffCost)}/mo (trained ${fmt(s.trainedCost)}).</div></div>
+      <div class="row"><div class="desc">Hire employee <span class="tiny">(+${s.staffCap} capacity, +${fmt(s.staffCost)}/mo burn)</span></div>
+        <button class="btn" id="hireBtn">Hire<span class="cost">${fmt(HIRE_FEE)}</span></button></div>
+      <div class="row"><div class="desc">Train employee <span class="tiny">(+capacity${G.segKey==="highend"?", +reputation — critical for high-end":", +reputation"})</span></div>
+        <button class="btn" id="trainBtn" ${G.trained>=G.staff?"disabled":""}>Train<span class="cost">${fmt(TRAIN_COST)}</span></button></div>
+      <div class="row"><div class="desc">Lay off <span class="tiny">(severance, −1 rep)</span></div>
+        <button class="btn danger" id="fireBtn" ${G.staff<=1?"disabled":""}>Lay off<span class="cost">${fmt(SEVERANCE)}</span></button></div>
+    </div>
+    <div class="card dcard">
+      <h3>🏗️ Store & services</h3>
+      ${Object.entries(IMPROVEMENTS).map(([id,im])=>`
+        <div class="row"><div class="desc"><b>${im.name}</b> — ${im.desc}</div>
+        ${G[id]?'<span class="owned">✓ Installed</span>':`<button class="btn" data-imp="${id}">Buy<span class="cost">${fmt(im.cost)}</span></button>`}</div>`).join("")}
+      <div class="row"><div class="desc"><b>${s.serviceName}</b> — recurring high-margin revenue, grows monthly.</div>
+        ${G.services?`<span class="owned">✓ Earning ~${fmt(G.serviceLevel)}/mo</span>`:`<button class="btn" id="svcBtn">Launch<span class="cost">${fmt(SERVICE_LAUNCH)}</span></button>`}</div>
+      <div class="row"><div class="desc"><b>Insurance</b> — ${fmt(INSURANCE_COST)}/mo; covers most theft/recall losses.</div>
+        <button class="btn" id="insBtn">${G.insurance?"Cancel":"Buy"} insurance</button></div>
+    </div>
+    <div class="card dcard">
+      <h3>💰 Fundraising</h3>
+      <div class="row"><div class="desc"><b>Bank loan</b> — +$5,000 now; 1.5%/mo interest, ~10-month payback. Borrowed: ${fmt(G.borrowed)}/${fmt(LOAN_MAX)}</div>
+        <button class="btn" id="loanBtn" ${G.borrowed>=LOAN_MAX?"disabled":""}>Borrow $5,000</button></div>
+      <div class="row"><div class="desc"><b>Investor pitch</b> — answer 3 questions about YOUR numbers. Success: +${fmt(INVESTOR_CASH)} for ${INVESTOR_EQUITY*100}% <span class="tt" data-tip="Equity = ownership. Every % you give away multiplies your final valuation down. 15% equity = final score × 0.85.">equity</span>.</div>
+        <button class="btn" id="invBtn" ${G.investorRounds>=2||G.month-G.investorLastFail<2||G.month<1?"disabled":""}>Pitch</button></div>
+      <div class="row"><div class="desc"><b>Crowdfunding</b> — one-time campaign; payout depends on reputation + luck.</div>
+        <button class="btn" id="crowdBtn" ${G.crowdUsed?"disabled":""}>${G.crowdUsed?"Used":"Launch"}<span class="cost">${G.crowdUsed?"":fmt(CROWD_COST)}</span></button></div>
+    </div>
+    <div class="card dcard">
+      <h3>🏷️ Pricing <span class="pill">${G.pricing}</span></h3>
+      ${["undercut","match","premium"].map(p=>{
+        const pm=s.priceMults[p];
+        return`<div class="row"><div class="desc"><b>${p==="undercut"?"🔻 Undercut":p==="match"?"⚖️ Match market":"💎 Premium"}</b>
+          <span class="tiny">price ×${pm.p} · demand ×${pm.d}${G.segKey==="highend"&&p==="undercut"?" · −6 rep to switch!":""}</span></div>
+        <button class="btn" data-price="${p}" ${G.pricing===p?"disabled":""}>${G.pricing===p?"Active":"Switch (free)"}</button></div>`;}).join("")}
+      ${G.bulkOffer?`<div class="row" style="border:1px solid var(--warn);border-radius:10px;padding:8px;margin-top:6px">
+        <div class="desc"><b>💼 Bulk order on the table:</b> buy ${G.bulkOffer.units} units (~${fmt(G.bulkOffer.units*uc)}) → they pay <b class="good">${fmt(G.bulkOffer.payout)}</b> next month.</div>
+        <div style="display:flex;gap:6px"><button class="btn primary" id="bulkYes">Accept</button><button class="btn" id="bulkNo">Decline</button></div></div>`:""}
+    </div>
+  </div>
+  <div style="text-align:center;margin-top:20px">
+    <button class="btn primary" id="endBtn" style="font-size:1.15rem;padding:14px 40px">🔔 Open the Doors — resolve ${MONTH_NAMES[G.month]}</button>
+    <p class="tiny" style="margin-top:6px">Revenue comes in, then a random event may hit.</p>
+  </div>`;
+  wireGame();
+}
+function suggestOrder(){
+  const last=G.history.length?G.history[G.history.length-1].demand:SEGMENTS[G.segKey].baseDemand;
+  return Math.max(0,Math.round(last*seasonMult(G,G.month)/seasonMult(G,Math.max(0,G.month-1)))-G.units+ (G.segKey==="budget"?50:1));
+}
+function wireGame(){
+  $("#newGame").onclick=()=>{
+    openModal(`<h2>Start a new game?</h2><p class="small" style="margin:8px 0">This fully resets everything — the current run is gone for good.</p>
+      <div style="display:flex;gap:10px;margin-top:10px"><button class="btn danger" id="ngYes">Yes, reset</button><button class="btn" id="ngNo">Keep playing</button></div>`);
+    $("#ngYes").onclick=()=>{closeModal();renderSetup();};
+    $("#ngNo").onclick=closeModal;
+  };
+  $("#ordBtn").onclick=()=>{
+    const q=Math.max(0,Math.round(+$("#ordQty").value||0));
+    const cost=q*effUnitCost(G);
+    if(!q){toast("Enter a quantity first.","err");return;}
+    const w=warnIfTight(cost);if(w)toast(w,"err");
+    confirmSpend("Order "+q+" "+SEGMENTS[G.segKey].unitLabel+"s",cost,()=>act(()=>orderInventory(G,q)));
+  };
+  const cat=$("#catBtn");if(cat)cat.onclick=()=>act(()=>addCategory(G));
+  $("#liqBtn").onclick=()=>act(()=>liquidate(G),"earn");
+  document.querySelectorAll("[data-mkt]").forEach(b=>b.onclick=()=>{
+    const id=b.dataset.mkt;const w=warnIfTight(MARKETING[id].cost);if(w)toast(w,"err");
+    act(()=>setMarketing(G,id));});
+  $("#hireBtn").onclick=()=>act(()=>hireStaff(G));
+  $("#trainBtn").onclick=()=>act(()=>trainStaff(G));
+  $("#fireBtn").onclick=()=>act(()=>layoffStaff(G));
+  document.querySelectorAll("[data-imp]").forEach(b=>b.onclick=()=>{
+    const id=b.dataset.imp;
+    confirmSpend("Install "+IMPROVEMENTS[id].name,IMPROVEMENTS[id].cost,()=>act(()=>buyImprovement(G,id)));});
+  $("#svcBtn")&&($("#svcBtn").onclick=()=>act(()=>launchServices(G)));
+  $("#insBtn").onclick=()=>act(()=>setInsurance(G,!G.insurance));
+  $("#loanBtn").onclick=()=>act(()=>takeLoan(G),"earn");
+  $("#crowdBtn").onclick=()=>act(()=>runCrowdfunding(G));
+  $("#invBtn").onclick=showInvestorPitch;
+  document.querySelectorAll("[data-price]").forEach(b=>b.onclick=()=>act(()=>setPricing(G,b.dataset.price)));
+  const by=$("#bulkYes");if(by){by.onclick=()=>{
+    confirmSpend("Buy "+G.bulkOffer.units+" units for the corporate order",G.bulkOffer.units*effUnitCost(G),()=>act(()=>acceptBulkOrder(G),"earn"));};
+    $("#bulkNo").onclick=()=>act(()=>declineBulkOrder(G));}
+  $("#endBtn").onclick=()=>{
+    const rep=endMonth(G);
+    if(G.bankrupt){renderBankrupt(rep);return;}
+    showMonthReport(rep);
+  };
+}
+function showInvestorPitch(){
+  const qs=investorQuestions(G);
+  let html=`<h2>🤝 Investor pitch</h2><p class="small">Answer at least 2 of 3 correctly about your OWN business. Success: +${fmt(INVESTOR_CASH)} for ${INVESTOR_EQUITY*100}% equity.</p>`;
+  qs.forEach((q,i)=>{
+    html+=`<p style="margin:10px 0 4px"><b>${i+1}. ${q.q}</b></p>`+
+      q.opts.map((o,j)=>`<label style="display:block;padding:4px 0"><input type="radio" name="q${i}" value="${o.correct?1:0}"> ${o.label}</label>`).join("");
+  });
+  html+=`<div style="display:flex;gap:10px;margin-top:12px"><button class="btn primary" id="pitchGo">Make the pitch</button><button class="btn" id="pitchNo">Back out</button></div>`;
+  openModal(html);
+  $("#pitchNo").onclick=closeModal;
+  $("#pitchGo").onclick=()=>{
+    let correct=0;
+    for(let i=0;i<3;i++){const sel=document.querySelector(`input[name=q${i}]:checked`);if(sel&&sel.value==="1")correct++;}
+    closeModal();
+    const r=pitchInvestor(G,correct);
+    if(!r.ok){toast(r.msg,"err");return;}
+    toast(r.msg,r.success?"earn":"err");
+    renderGame();
+  };
+}
+
+/* ================= MONTH REPORT ================= */
+function showMonthReport(r){
+  const s=SEGMENTS[G.segKey];
+  const f=r.factors;
+  const fx=(n)=>"×"+n.toFixed(2);
+  const lines=[
+    `Base demand <b>${f.base}</b> ${s.unitLabel}s`,
+    `Seasonality (${MONTH_NAMES[r.month]}) <b>${fx(f.season)}</b>`,
+    `Pricing (${G.pricing}) <b>${fx(f.pf)}</b>`,
+    `Marketing <b>${fx(f.mk)}</b>`,
+    `Reputation (${Math.round(G.rep)}) <b>${fx(f.rf)}</b>`,
+    f.impf>1?`Store upgrades <b>${fx(f.impf)}</b>`:null,
+    f.evf!==1?`Events/competition <b>${fx(f.evf)}</b>`:null,
+    `Luck <b>${fx(f.luck)}</b>`,
+  ].filter(Boolean).map(t=>`<li>· ${t}</li>`).join("");
+  const capped=r.sold<r.demand;
+  const capReason=r.sold===r.cap&&r.cap<r.demand?"staff capacity":"inventory on hand";
+  const net=r.revenue-r.returns+r.serviceRev-r.cogs-r.opEx-r.shrinkCost;
+  openModal(`
+    <h2>📊 ${MONTH_NAMES[r.month]} results</h2>
+    <p class="small"><b>Why you earned this</b> — demand math:</p>
+    <ul class="breakdown">${lines}
+      <li>→ <b>${r.demand} customers</b> wanted to buy; you sold <b>${r.sold}</b> at ${fmt(r.price)}${f.wasDiscounted?' <span class="warn">(old-model discount)</span>':""}
+      ${capped?`<span class="bad"> — limited by ${capReason}!</span>`:""}</li></ul>
+    ${r.event?`<div class="event-card ${r.event.kind}"><b>${r.event.title}</b><p class="small" style="margin-top:4px">${r.event.desc}</p></div>`:""}
+    <table class="pnl">
+      <tr><td>Revenue (${r.sold} × ${fmt(r.price)})</td><td class="good">+${fmt(r.revenue)}</td></tr>
+      ${r.returns?`<tr><td>Returns & defects</td><td class="bad">−${fmt(r.returns)}</td></tr>`:""}
+      ${r.serviceRev?`<tr><td>${s.serviceName}</td><td class="good">+${fmt(r.serviceRev)}</td></tr>`:""}
+      <tr><td><span class="tt" data-tip="Cost of goods sold — what you originally paid for the units you sold this month.">COGS</span></td><td class="bad">−${fmt(r.cogs)}</td></tr>
+      <tr><td>Operating costs (bills + spending)</td><td class="bad">−${fmt(r.opEx)}</td></tr>
+      ${r.shrinkCost?`<tr><td><span class="tt" data-tip="Stock lost to theft/damage this month. Security upgrades cut this from 2% to 0.5%.">Shrinkage</span> (${r.shrunk} units)</td><td class="bad">−${fmt(r.shrinkCost)}</td></tr>`:""}
+      <tr class="total"><td>Net profit</td><td class="${net>=0?'good':'bad'}">${net>=0?"+":"−"}${fmt(Math.abs(net))}</td></tr>
+      <tr class="total"><td>Cash balance</td><td class="${G.cash>3000?'good':'bad'}">${fmt(G.cash)}</td></tr>
+      <tr><td>Inventory left</td><td>${r.unitsLeft} ${s.unitLabel}s (${fmt(inventoryValue(G))})</td></tr>
+    </table>
+    <button class="btn primary" id="nextBtn" style="width:100%;margin-top:8px">
+      ${G.phase==="won"?"🏁 See final results":"Continue to "+MONTH_NAMES[G.month]+" →"}</button>`);
+  $("#nextBtn").onclick=()=>{
+    closeModal();
+    if(G.phase==="won"){renderVictory();return;}
+    startMonth(G);
+    if(G.bankrupt){renderBankrupt();return;}
+    showBills();
+  };
+}
+
+/* ================= CASH CHART (single series, hover tooltips) ===== */
+function cashChart(){
+  const pts=[{m:-1,v:20000}].concat(G.history.map(h=>({m:h.m,v:h.cashEnd})));
+  if(!G.gameOver)pts.push({m:G.month,v:Math.round(G.cash)});
+  const W=1000,H=150,padL=46,padR=30,padT=12,padB=20;
+  const lo=Math.min(0,...pts.map(p=>p.v)),hi=Math.max(22000,...pts.map(p=>p.v));
+  const X=i=>padL+(W-padL-padR)*(i/(Math.max(1,pts.length-1)));
+  const Y=v=>padT+(H-padT-padB)*(1-(v-lo)/(hi-lo));
+  const line=pts.map((p,i)=>(i?"L":"M")+X(i).toFixed(1)+" "+Y(p.v).toFixed(1)).join(" ");
+  const gridVals=[0,10000,Math.round(hi/1000)*1000].filter((v,i,a)=>a.indexOf(v)===i&&v>=lo&&v<=hi);
+  const grid=gridVals.map(v=>`<line class="axis" x1="${padL}" x2="${W-padR}" y1="${Y(v)}" y2="${Y(v)}"/>
+    <text x="4" y="${Y(v)+3}">$${(v/1000)}k</text>`).join("");
+  const dots=pts.map((p,i)=>`<circle class="dot" cx="${X(i)}" cy="${Y(p.v)}" r="3"></circle>
+    <circle class="hover-target" cx="${X(i)}" cy="${Y(p.v)}" r="10"><title>${p.m<0?"Start":MONTH_NAMES[p.m]}: ${fmt(p.v)}</title></circle>`).join("");
+  const last=pts[pts.length-1];
+  const lbl=`<text class="lastlbl" x="${Math.min(X(pts.length-1)+6,W-70)}" y="${Math.max(12,Y(last.v)-6)}">${fmt(last.v)}</text>`;
+  return`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Cash balance by month">
+    ${grid}<path class="cashline" d="${line}"/>${dots}${lbl}</svg>`;
+}
+
+/* ================= END SCREENS ================= */
+function renderBankrupt(){
+  const drains=biggestDrains(G);
+  const topSpend=drains.find(d=>!/Recurring/.test(d[0]));
+  let lesson="Cash is oxygen: profit on paper means nothing if the bank account hits zero first.";
+  if(topSpend&&/Inventory/.test(topSpend[0])&&topSpend[1]>6000)
+    lesson="Inventory is cash wearing a disguise — buy what will sell this month, not what might sell someday.";
+  else if(topSpend&&/Marketing|Staffing|Improvements/.test(topSpend[0])&&topSpend[1]>3000)
+    lesson="You spent on growth before the revenue existed to pay for it. Growth spending is great — when this month's sales can cover it.";
+  else if(drains[0]&&/Recurring/.test(drains[0][0]))
+    lesson="Rent and payroll burned every month whether you acted or not. Plan around the burn rate before planning for growth.";
+  app.innerHTML=`
+    <div style="text-align:center;margin-top:30px">
+      <h1 style="font-size:2.6rem">💀 BANKRUPT</h1>
+      <p class="small" style="margin-top:6px">${G.storeName} closed its doors in ${MONTH_NAMES[G.month]} (month ${G.month+1}).</p>
+      <p class="warn" style="margin-top:4px">${G.bankruptWhy||""}</p>
+    </div>
+    <div class="setup-grid" style="margin-top:20px">
+      <div class="card"><h3>📉 Biggest cash drains</h3>
+        ${drains.map(d=>`<div class="stat-row"><span>${d[0]}</span><b class="bad">−${fmt(d[1])}</b></div>`).join("")}
+      </div>
+      <div class="card"><h3>🕰️ How it happened</h3>
+        <ul class="timeline">${G.log.slice(-12).map(l=>`<li><b>${MONTH_NAMES[Math.min(11,l.m)]}:</b> ${l.txt}</li>`).join("")}</ul>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px"><h3>🎓 Lesson</h3><p class="small" style="margin-top:6px">${lesson}</p>
+      <h3 style="margin-top:12px">Debrief</h3>
+      <ol class="debrief">${debriefQuestions(G).map(q=>`<li>${q}</li>`).join("")}</ol></div>
+    <div style="text-align:center;margin-top:18px"><button class="btn primary" id="ng2" style="padding:12px 30px">↻ New Game</button></div>`;
+  $("#ng2").onclick=renderSetup;
+}
+function renderVictory(){
+  const sc=finalScore(G);
+  const bl=badges(G,sc);
+  const s=SEGMENTS[G.segKey];
+  app.innerHTML=`
+    <div style="text-align:center;margin-top:24px">
+      <h1>🏁 You survived the year!</h1>
+      <p class="small">${G.storeName} · Team ${G.teamName} · ${s.name}</p>
+      <div class="score-big money">${fmt(sc.valuation)}</div>
+      <p class="small"><b>FINAL BUSINESS VALUATION</b> — write this on the board!</p>
+      <div class="badges">${bl.map(b=>`<span class="badge">${b}</span>`).join("")}</div>
+      <p class="small" style="margin-top:4px">📌 ${segmentNote(G,sc)}</p>
+    </div>
+    <div class="setup-grid" style="margin-top:18px">
+      <div class="card"><h3>🧮 Valuation breakdown</h3>
+        <div class="stat-row"><span>Cash</span><b>${fmt(sc.cash)}</b></div>
+        <div class="stat-row"><span>Avg. profit last 3 months × 10</span><b class="${sc.profitComponent>=0?'good':'bad'}">${fmt(sc.profitComponent)}</b></div>
+        <div class="stat-row"><span>Inventory & assets</span><b>${fmt(sc.inv+sc.assets)}</b></div>
+        <div class="stat-row"><span>Outstanding debt</span><b class="bad">−${fmt(sc.debt)}</b></div>
+        <div class="stat-row"><span>× Ownership kept (${100-sc.equity*100}%)</span><b>${fmt(sc.valuation)}</b></div>
+      </div>
+      <div class="card"><h3>📈 Year in review</h3>
+        <div class="stat-row"><span>Total revenue</span><b>${fmt(G.history.reduce((a,r)=>a+r.revenue,0))}</b></div>
+        <div class="stat-row"><span>Total profit</span><b>${fmt(G.history.reduce((a,r)=>a+r.profit,0))}</b></div>
+        <div class="stat-row"><span>Profitable months</span><b>${G.history.filter(r=>r.profit>0).length} / 12</b></div>
+        <div class="stat-row"><span>Final reputation</span><b>${Math.round(G.rep)}/100</b></div>
+        <div class="stat-row"><span>Lowest cash point</span><b class="${G.minCash<1500?'bad':'good'}">${fmt(Math.max(0,G.minCash))}</b></div>
+      </div>
+    </div>
+    <div class="card chartbox" style="margin-top:14px"><div class="lbl tiny" style="text-transform:uppercase;letter-spacing:.8px">Cash over time</div>${cashChart()}</div>
+    <div class="card" style="margin-top:14px"><h3>🎓 Debrief — discuss as a team</h3>
+      <ol class="debrief">${debriefQuestions(G).map(q=>`<li>${q}</li>`).join("")}</ol></div>
+    <div style="text-align:center;margin-top:18px"><button class="btn primary" id="ng3" style="padding:12px 30px">↻ New Game</button></div>`;
+  $("#ng3").onclick=renderSetup;
+}
+
+renderSetup();
+</script>
+</body>
+</html>
