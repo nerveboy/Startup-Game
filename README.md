@@ -1,7 +1,7 @@
-# ⚡ Circuit Startup — Electronics Store Simulation
+# ⚡ Circuit Startup — Electronics Store Simulation (Porter edition)
 
 A classroom business simulation for college student teams: start an electronics
-store with **$20,000**, survive **12 monthly turns**, and finish with the highest
+store with **$30,000**, survive **12 monthly turns**, and finish with the highest
 business valuation. Runs entirely in the browser — no backend, no login, no build
 step, no external dependencies.
 
@@ -12,16 +12,29 @@ URL for this repository.
 
 - One 45-minute class period: teams play in parallel (one laptop per team,
   25–35 minutes per playthrough) and write their final valuation on the board.
-- Three market segments (budget / mainstream / high-end) with deliberately
-  different economics, each viable with a different strategy:
-  - **Budget** — volume and cost control
-  - **Mainstream** — marketing timing and the holiday season
-  - **High-end** — inventory discipline, trained staff, and reputation
+- Setup is built around **Porter's Generic Strategies**: teams choose a
+  competitive advantage (low-cost operator vs. premium experience) and a market
+  scope (broad vs. focused niche), mapping to Cost Leadership, Differentiation,
+  Cost Focus, or Differentiation Focus. All four quadrants are viable when
+  played coherently.
+- A **strategy coherence** mechanic tracks whether monthly decisions match the
+  declared positioning. Consistent play earns a growing demand bonus; drifting
+  ("a discount store booking influencers") pushes the clarity meter toward
+  **Stuck in the middle** (−10% demand), and the end screen delivers a Porter
+  verdict on how they actually executed.
+- Demand is fully transparent: a live projection panel itemizes every demand
+  multiplier during the decision phase, results reconcile against projections
+  (random variation ±10%, disclosed up front), and a next-month preview flags
+  seasonality shifts, expiring boosts, and scheduled payments.
+- Financing: family & friends (0% but callable), bank loan (8% APR, 12 equal
+  payments, exact payment shown before signing), investor pitch (cash for
+  equity), crowdfunding, and liquidation sales.
 - Cash ≤ $0 at any point = bankruptcy (with a recap and lesson).
 - Survivors get a valuation = cash + (avg. last-3-months profit × 10) +
-  inventory & assets − debt, × ownership kept. Badges and a per-segment note
-  keep cross-segment comparison honest.
-- Ends with reflection questions generated from the team's actual playthrough.
+  inventory & assets − debt (bank + family), × ownership kept. Badges and a
+  per-strategy note keep cross-quadrant comparison honest.
+- Ends with reflection questions generated from the team's actual playthrough,
+  including one tied to Porter and their coherence history.
 
 Randomness is seeded from the team + store name, the first month is event-free,
 and no negative events land back-to-back in the opening months, so no team can
