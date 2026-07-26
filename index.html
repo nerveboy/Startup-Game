@@ -180,7 +180,68 @@ details.howto .card{margin-top:8px}
 .guide ul{margin:4px 0 4px 20px}
 .guide .ex{background:#10224e; border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin:6px 0; font-size:.82rem}
 
-@media (max-width:640px){ .decisions{grid-template-columns:1fr} }
+/* ============================================================
+   MOBILE / TOUCH — single column, 44px touch targets,
+   stacked decision rows, readable type.
+   ============================================================ */
+@media (max-width:760px){
+  :root{font-size:16px}   /* must be :root — it out-specifies a bare html selector */
+  .wrap{padding:14px 14px 56px}
+
+  /* grids collapse; minmax(0,…) lets tracks shrink below min-content */
+  .decisions{grid-template-columns:minmax(0,1fr)}
+  .setup-grid{grid-template-columns:minmax(0,1fr)}
+  .dash{grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px}
+  .card,.dcard .row,.dcard .desc,.qty,.dash .card{min-width:0}
+  .qty input{min-width:0}
+
+  /* decision rows stack: description above, full-width control below */
+  .dcard .row{flex-direction:column; align-items:stretch; gap:9px; padding:11px 0}
+  .dcard .desc{font-size:.9rem}
+  .dcard .row .btn{width:100%; justify-content:center}
+  .qty{width:100%; display:flex}
+  .qty input{flex:1; width:auto; height:46px; font-size:1rem}
+  .qty .btn{flex:0 0 auto; width:auto}
+  .dcard h3{flex-wrap:wrap; row-gap:6px}
+
+  /* touch targets */
+  .btn{min-height:44px; padding:11px 15px; white-space:normal; max-width:100%}
+  .price-opt,.seg-card,.niche-chip{min-width:0}
+
+  /* setup */
+  .card > div[style*="grid-template-columns:1fr 1fr"]{grid-template-columns:minmax(0,1fr) !important}
+  .price-opts{flex-direction:column}
+  .price-opt{min-width:0; width:100%}
+
+  /* header */
+  .topbar{gap:9px}
+  .topbar h1{font-size:1.15rem}
+  .month-chip{font-size:.88rem; padding:6px 11px}
+
+  /* chart a little taller so it reads on a small screen */
+  .chartbox svg{height:190px}
+
+  /* modals */
+  .modal-bg{padding:10px}
+  .modal{max-height:94vh}
+  .pnl td{font-size:.86rem; padding:7px 3px}
+
+  /* type sizes */
+  .small{font-size:.86rem}
+  .tiny{font-size:.78rem}
+  .dash .lbl{font-size:.72rem}
+  .dash .val{font-size:1.3rem}
+  .pill{font-size:.74rem}
+
+  /* tooltips become a pinned bottom hint bar so they can't overflow */
+  .tt:hover::after,.tt:active::after{
+    content:attr(data-tip); position:fixed; left:10px; right:auto; bottom:14px; top:auto;
+    width:calc(100vw - 20px); z-index:300; font-size:.83rem;
+  }
+  #toasts{left:10px; right:auto; top:10px; width:auto; max-width:calc(100vw - 20px)}
+  .toast{max-width:100%; font-size:.84rem}
+}
+@media (max-width:340px){ .dash{grid-template-columns:minmax(0,1fr)} }
 
 /* ============================================================
    Card-scoped light text — cards are dark coffee brown (#6F4E37).
