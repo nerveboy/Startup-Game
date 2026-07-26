@@ -8,6 +8,26 @@ step, no external dependencies.
 **Play it:** open `index.html` in any modern browser, or visit the GitHub Pages
 URL for this repository.
 
+## Two editions
+
+| Edition | Path | URL | Notes |
+|---|---|---|---|
+| **Classroom** | `index.html` | `/Startup-Game/` | The version to send students. Stable. |
+| **Deluxe** | `deluxe/index.html` | `/Startup-Game/deluxe/` | Same game, richer presentation. For future use. |
+
+Both run the **identical game engine** — the deluxe edition splices in the exact
+same `<script id="engine">` block, so the economics, balance, and random seeding
+are byte-for-byte the same and a given team/store name yields the same playthrough
+in either. Only the presentation layer differs.
+
+The deluxe edition adds: a custom SVG icon set, an interactive **Porter 2×2
+matrix** that highlights your quadrant live during setup, a waterfall-style demand
+stack with proportional contribution bars, radial gauges for reputation and
+strategy clarity, a sticky financial HUD, a 12-month seasonality timeline strip,
+an animated cash chart with area gradient and crosshair tooltip, animated counters,
+floating spend/earn feedback, and confetti on the victory screen. It respects
+`prefers-reduced-motion` and is verified free of horizontal overflow on mobile.
+
 ## For instructors
 
 - One 45-minute class period: teams play in parallel (one laptop per team,

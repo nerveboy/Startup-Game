@@ -1,0 +1,2139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circuit Startup — Deluxe Edition</title>
+<style>
+/* ============================================================
+   SURFACE SYSTEM
+   Every component reads --t1/--t2/--t3 (text) and --bd (borders)
+   from whichever surface it sits on. No specificity wars.
+   ============================================================ */
+:root{
+  /* warm paper */
+  --paper:#EADDCA; --paper-lo:#DCCAAE; --paper-hi:#F7F0E4;
+  /* coffee cards */
+  --card:#6F4E37; --card-hi:#7D5B43; --card-lo:#573B29;
+  /* accents */
+  --terra:#C2410C; --terra-lo:#9A3308; --amber:#E8871E; --gold:#CA8A04;
+  --plum:#7C4A52;
+  /* chart */
+  --chart:#F59E0B; --chart2:#EA6C0B;
+  --radius:16px; --radius-sm:11px;
+  --shadow-1:0 1px 2px rgba(74,48,28,.14), 0 3px 8px rgba(74,48,28,.10);
+  --shadow-2:0 2px 4px rgba(74,48,28,.16), 0 10px 26px rgba(74,48,28,.16);
+  --shadow-3:0 4px 8px rgba(74,48,28,.18), 0 22px 50px rgba(74,48,28,.22);
+  --ease:cubic-bezier(.22,.9,.28,1);
+  font-size:15px;
+  /* default surface = light paper */
+  --t1:#3A2A1A; --t2:#6B5540; --t3:#8E7458;
+  --bd:rgba(90,62,43,.20); --bd-2:rgba(90,62,43,.34);
+  --ok:#2F7D32; --no:#B3261E; --hm:#9A5B06;
+  --fieldbg:#FBF6EE; --fieldbd:#C3A985;
+}
+.surface-dark{
+  --t1:#FDF6EC; --t2:#E7D8C4; --t3:#BFA98F;
+  --bd:rgba(255,255,255,.15); --bd-2:rgba(255,255,255,.30);
+  --ok:#7BE495; --no:#FF97AA; --hm:#FFC46B;
+  --fieldbg:rgba(0,0,0,.22); --fieldbd:rgba(255,255,255,.25);
+  color:var(--t1);
+}
+.surface-light{
+  --t1:#3A2A1A; --t2:#6B5540; --t3:#8E7458;
+  --bd:rgba(90,62,43,.20); --bd-2:rgba(90,62,43,.34);
+  --ok:#2F7D32; --no:#B3261E; --hm:#9A5B06;
+  --fieldbg:#FBF6EE; --fieldbd:#C3A985;
+  color:var(--t1);
+}
+
+*{box-sizing:border-box; margin:0; padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:
+    /* paper grain */
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/><feColorMatrix type='saturate' values='0'/></filter><rect width='180' height='180' filter='url(%23n)' opacity='.055'/></svg>"),
+    radial-gradient(900px 520px at 88% -6%, rgba(232,135,30,.22), transparent 62%),
+    radial-gradient(760px 460px at 4% 100%, rgba(124,74,82,.16), transparent 60%),
+    linear-gradient(178deg, var(--paper-hi) 0%, var(--paper) 42%, var(--paper-lo) 100%);
+  background-attachment:fixed, fixed, fixed, fixed;
+  color:var(--t1);
+  font-family:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  min-height:100vh; overflow-x:hidden;
+}
+button,input{font-family:inherit}
+h1,h2,h3{font-weight:800; letter-spacing:-.015em; line-height:1.18}
+.wrap{max-width:1200px; margin:0 auto; padding:0 20px 72px}
+.small{font-size:.83rem; color:var(--t2); line-height:1.5}
+.tiny{font-size:.735rem; color:var(--t3); line-height:1.45}
+.num{font-variant-numeric:tabular-nums;
+  font-family:"Cascadia Mono",Consolas,"SF Mono",Menlo,"DejaVu Sans Mono",monospace}
+.good{color:var(--ok)} .bad{color:var(--no)} .warn{color:var(--hm)}
+.hidden{display:none !important}
+.center{text-align:center}
+
+/* ---------- icons ---------- */
+.ic{width:1.15em; height:1.15em; flex:none; vertical-align:-.16em}
+.ic-lg{width:26px; height:26px}
+#sprite{position:absolute; width:0; height:0; overflow:hidden}
+
+/* ---------- cards ---------- */
+.card{
+  position:relative; border-radius:var(--radius); padding:18px;
+  background:linear-gradient(168deg, var(--card-hi), var(--card) 46%, var(--card-lo));
+  border:1px solid rgba(40,24,12,.34);
+  box-shadow:var(--shadow-2), inset 0 1px 0 rgba(255,255,255,.10);
+  /* cards are dark coffee → adopt the dark text/border set */
+  --t1:#FDF6EC; --t2:#E7D8C4; --t3:#BFA98F;
+  --bd:rgba(255,255,255,.15); --bd-2:rgba(255,255,255,.30);
+  --ok:#7BE495; --no:#FF97AA; --hm:#FFC46B;
+  --fieldbg:rgba(0,0,0,.24); --fieldbd:rgba(255,255,255,.26);
+  color:var(--t1);
+}
+.card::after{ /* soft top sheen */
+  content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+  background:linear-gradient(180deg, rgba(255,255,255,.07), transparent 38%);
+}
+.card.paper{
+  background:linear-gradient(168deg, #FBF4E8, #F1E5D2 60%, #E9DAC3);
+  border-color:rgba(120,86,56,.28);
+  /* cream panel → revert to the light text/border set */
+  --t1:#3A2A1A; --t2:#6B5540; --t3:#8E7458;
+  --bd:rgba(90,62,43,.20); --bd-2:rgba(90,62,43,.34);
+  --ok:#2F7D32; --no:#B3261E; --hm:#9A5B06;
+  --fieldbg:#FBF6EE; --fieldbd:#C3A985;
+  color:var(--t1);
+}
+.card > *{position:relative; z-index:1}
+.card h3{font-size:1rem; display:flex; align-items:center; gap:9px; margin-bottom:10px}
+.card h3 .ic{color:var(--amber)}
+.card.paper h3 .ic{color:var(--terra)}
+
+/* ---------- buttons ---------- */
+.btn{
+  cursor:pointer; border:1px solid var(--fieldbd); border-radius:var(--radius-sm);
+  background:linear-gradient(180deg,#FBF3E7,#EDDFC7); color:#3A2A1A;
+  padding:8px 14px; font-size:.875rem; font-weight:600; white-space:nowrap;
+  display:inline-flex; align-items:center; gap:7px;
+  box-shadow:0 1px 0 rgba(255,255,255,.7) inset, var(--shadow-1);
+  transition:transform .09s var(--ease), filter .15s, box-shadow .15s;
+}
+.btn:hover{filter:brightness(1.04); box-shadow:0 1px 0 rgba(255,255,255,.7) inset, var(--shadow-2); transform:translateY(-1px)}
+.btn:active{transform:translateY(1px) scale(.985)}
+.btn:disabled{opacity:.42; cursor:not-allowed; transform:none; filter:grayscale(.35)}
+.btn .cost{color:var(--terra); font-weight:800; font-variant-numeric:tabular-nums}
+.btn.primary{
+  background:linear-gradient(180deg,#E5711A,#C2410C 60%,#A83809); color:#FFF6EC;
+  border-color:#8F3208; box-shadow:0 1px 0 rgba(255,255,255,.28) inset, 0 6px 18px rgba(194,65,12,.34);
+}
+.btn.primary .cost{color:#FFE0BC}
+.btn.danger{background:linear-gradient(180deg,#B1444E,#8E2F3B); color:#FFF1F1; border-color:#7A2632}
+.btn.danger .cost{color:#FFD9DD}
+.btn.ghost{background:transparent; box-shadow:none; border-color:var(--bd-2); color:var(--t1)}
+.btn.big{font-size:1.05rem; padding:14px 30px; border-radius:14px}
+.btn-col{display:flex; flex-direction:column; gap:6px}
+
+/* ---------- tooltips ---------- */
+.tt{border-bottom:1.5px dotted currentColor; cursor:help; position:relative}
+.tt::after{
+  content:attr(data-tip); position:absolute; left:50%; bottom:150%; z-index:80; width:250px;
+  transform:translate(-50%,6px); opacity:0; pointer-events:none;
+  background:#2E2016; border:1px solid rgba(232,135,30,.55); color:#FDF6EC;
+  padding:10px 12px; border-radius:12px; font-size:.775rem; line-height:1.45; font-weight:400;
+  box-shadow:var(--shadow-3); transition:opacity .16s, transform .16s var(--ease);
+}
+.tt:hover::after{opacity:1; transform:translate(-50%,0)}
+
+/* ============================ HUD ============================ */
+.hud{
+  position:sticky; top:0; z-index:60; margin:0 -20px 14px; padding:10px 20px;
+  background:linear-gradient(180deg,#F2E8D8,#E8DAC3);
+  border-bottom:1px solid rgba(120,86,56,.30);
+  box-shadow:0 4px 14px rgba(74,48,28,.13);
+  display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+}
+.hud-brand{display:flex; align-items:center; gap:11px; min-width:0}
+.hud-mark{
+  width:38px; height:38px; border-radius:11px; flex:none; display:grid; place-items:center;
+  background:linear-gradient(150deg,var(--amber),var(--terra)); color:#fff;
+  box-shadow:0 4px 12px rgba(194,65,12,.36), inset 0 1px 0 rgba(255,255,255,.4);
+}
+.hud-name{font-weight:800; font-size:1.02rem; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.hud-sub{font-size:.7rem; color:var(--t3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.hud-spacer{flex:1}
+.hud-stat{display:flex; flex-direction:column; align-items:flex-end; line-height:1.1}
+.hud-stat .k{font-size:.62rem; letter-spacing:.09em; text-transform:uppercase; color:var(--t3); font-weight:700}
+.hud-stat .v{font-size:1.32rem; font-weight:800}
+.hud-stat.sm .v{font-size:1rem}
+.cash-good{color:#2F7D32} .cash-warn{color:#A15C07} .cash-bad{color:#B3261E}
+@keyframes cashPulse{0%{transform:scale(1)}35%{transform:scale(1.13)}100%{transform:scale(1)}}
+.pulse{animation:cashPulse .5s var(--ease)}
+
+/* ---------- month timeline ---------- */
+.timeline{display:flex; gap:5px; margin:0 0 16px}
+.tl{
+  flex:1; min-width:0; border-radius:9px; padding:7px 3px 6px; text-align:center;
+  border:1px solid var(--bd); background:rgba(255,255,255,.34);
+  font-size:.68rem; font-weight:700; color:var(--t3); position:relative;
+  transition:transform .2s var(--ease), box-shadow .2s;
+}
+.tl .m{font-size:.78rem; color:var(--t2)}
+.tl .s{display:block; font-size:.62rem; font-weight:600; margin-top:1px}
+.tl.bump{background:linear-gradient(180deg,rgba(232,135,30,.20),rgba(232,135,30,.10)); border-color:rgba(232,135,30,.45)}
+.tl.peak{background:linear-gradient(180deg,rgba(194,65,12,.26),rgba(194,65,12,.13)); border-color:rgba(194,65,12,.5)}
+.tl.slump{background:rgba(124,74,82,.10)}
+.tl.done{opacity:.62}
+.tl.done .dot{position:absolute; top:4px; right:5px; width:6px; height:6px; border-radius:50%}
+.tl.now{
+  color:#FDF6EC; border-color:#5A3E2B; transform:translateY(-3px);
+  background:linear-gradient(168deg,var(--card-hi),var(--card-lo));
+  box-shadow:0 8px 20px rgba(74,48,28,.34);
+}
+.tl.now .m,.tl.now .s{color:#FDF6EC}
+
+/* ---------- stat tiles ---------- */
+.tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(158px,1fr)); gap:12px; margin-bottom:16px}
+.tile{padding:14px 15px}
+.tile .k{font-size:.64rem; letter-spacing:.1em; text-transform:uppercase; color:var(--t3); font-weight:800;
+  display:flex; align-items:center; gap:6px}
+.tile .v{font-size:1.42rem; font-weight:800; margin-top:5px; line-height:1.1}
+.tile .sub{font-size:.71rem; color:var(--t3); margin-top:3px}
+.tile-gauge{display:flex; align-items:center; gap:12px}
+.gauge-wrap{position:relative; width:60px; height:60px; flex:none}
+.gauge-wrap .gv{position:absolute; inset:0; display:grid; place-items:center; font-size:.9rem; font-weight:800}
+.gauge-bg{stroke:rgba(255,255,255,.16)}
+@keyframes dashIn{from{stroke-dashoffset:var(--full)}}
+.gauge-fg{transition:stroke-dashoffset .7s var(--ease); animation:dashIn .7s var(--ease)}
+
+/* ============================ PROJECTION ============================ */
+.proj{margin-bottom:16px; border-color:rgba(232,135,30,.5); box-shadow:var(--shadow-2), 0 0 0 1px rgba(232,135,30,.22), inset 0 1px 0 rgba(255,255,255,.1)}
+.proj h3 .ic{color:var(--chart)}
+.stack{margin-top:4px}
+.srow{display:flex; align-items:center; gap:12px; padding:6px 0; border-bottom:1px dashed var(--bd); font-size:.845rem}
+.srow:last-child{border-bottom:none}
+.srow .lab{flex:1; min-width:0; color:var(--t2)}
+.srow .bar{width:120px; flex:none; height:9px; position:relative; border-radius:5px; background:rgba(0,0,0,.2)}
+.srow .bar::before{content:""; position:absolute; left:50%; top:-2px; bottom:-2px; width:1px; background:var(--bd-2)}
+.srow .bar i{position:absolute; top:0; bottom:0; border-radius:4px; transition:width .5s var(--ease)}
+.srow .bar i.p{left:50%; background:linear-gradient(90deg,#5FBF74,#7BE495)}
+.srow .bar i.n{right:50%; background:linear-gradient(270deg,#D9556B,#FF97AA)}
+.srow .val{width:64px; flex:none; text-align:right; font-weight:800; font-variant-numeric:tabular-nums}
+.srow.base{border-bottom:1px solid var(--bd-2)}
+.srow.base .lab{color:var(--t1); font-weight:700}
+.srow.res{border-top:1px solid var(--bd-2); border-bottom:none; margin-top:4px; padding-top:9px; font-size:.9rem}
+.srow.res .lab{color:var(--t1); font-weight:700}
+.srow.res .val{width:auto; color:var(--t1)}
+.srow .val.p{color:var(--ok)} .srow .val.n{color:var(--no)} .srow .val.z{color:var(--t3)}
+.bindwarn{margin-top:11px; padding:10px 12px; border-radius:var(--radius-sm); font-size:.82rem;
+  border:1px solid rgba(255,196,107,.5); background:rgba(255,196,107,.13); color:#FFD9A0;
+  display:flex; gap:9px; align-items:flex-start}
+.bindwarn .ic{color:#FFC46B; margin-top:1px}
+.disclaim{margin-top:9px; font-size:.735rem; color:var(--t3); display:flex; align-items:center; gap:6px}
+
+/* ============================ CHART ============================ */
+.chart-card{margin-bottom:16px}
+.chart-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:2px}
+.chart-host{position:relative}
+.chart-host svg{width:100%; height:172px; display:block; overflow:visible}
+.grid-l{stroke:rgba(255,255,255,.13); stroke-width:1}
+.axis-t{fill:var(--t3); font-size:10px; font-family:inherit}
+.cline{fill:none; stroke:var(--chart); stroke-width:2.5; stroke-linejoin:round; stroke-linecap:round;
+  filter:drop-shadow(0 2px 5px rgba(245,158,11,.4))}
+@keyframes draw{from{stroke-dashoffset:var(--len)}}
+.cline.anim{stroke-dasharray:var(--len); animation:draw 1.1s var(--ease) forwards}
+.cdot{fill:var(--chart); stroke:var(--card); stroke-width:2}
+.cdot.hot{r:6}
+.clabel{fill:var(--t1); font-size:11px; font-weight:800; font-family:inherit}
+.crosshair{stroke:rgba(255,255,255,.4); stroke-width:1; stroke-dasharray:3 3}
+.ctip{
+  position:absolute; pointer-events:none; z-index:20; transform:translate(-50%,-135%);
+  background:#2E2016; color:#FDF6EC; border:1px solid rgba(232,135,30,.5);
+  padding:6px 10px; border-radius:9px; font-size:.76rem; white-space:nowrap;
+  box-shadow:var(--shadow-2); opacity:0; transition:opacity .12s;
+}
+.ctip .cv{font-weight:800; font-variant-numeric:tabular-nums}
+
+/* ============================ DECISIONS ============================ */
+.grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:14px}
+@keyframes riseIn{from{opacity:0; transform:translateY(14px)}}
+.rise{animation:riseIn .42s var(--ease) both}
+.row{display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:9px 0; border-bottom:1px dashed var(--bd)}
+.row:last-child{border-bottom:none}
+.row .d{flex:1; min-width:0; font-size:.835rem; color:var(--t2); line-height:1.45}
+.row .d b{color:var(--t1); font-weight:700}
+.pill{display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:999px;
+  font-size:.7rem; font-weight:700; border:1px solid var(--bd-2); color:var(--t2); margin-left:auto}
+.chip-on{color:var(--ok); font-weight:800; font-size:.79rem; display:inline-flex; align-items:center; gap:5px}
+.flag-off{display:inline-flex; align-items:center; gap:4px; color:#FF97AA; font-size:.72rem; font-weight:800; margin-top:2px}
+.qty{display:flex; align-items:center; gap:7px}
+.qty input{width:78px; text-align:center; padding:7px 6px; border-radius:9px; font-weight:700;
+  border:1px solid var(--fieldbd); background:var(--fieldbg); color:var(--t1);
+  font-variant-numeric:tabular-nums}
+.qty input:focus{outline:none; border-color:var(--amber); box-shadow:0 0 0 3px rgba(232,135,30,.25)}
+.hero-cta{text-align:center; margin:26px 0 0}
+@keyframes glowPulse{0%,100%{box-shadow:0 1px 0 rgba(255,255,255,.28) inset, 0 6px 18px rgba(194,65,12,.34)}
+  50%{box-shadow:0 1px 0 rgba(255,255,255,.28) inset, 0 8px 30px rgba(194,65,12,.6)}}
+.hero-cta .btn{animation:glowPulse 2.6s ease-in-out infinite}
+
+/* ============================ SETUP ============================ */
+.hero{padding:40px 0 20px; text-align:center; position:relative}
+.hero .logo{
+  font-size:clamp(2.2rem,5.4vw,3.3rem); font-weight:900; letter-spacing:-.03em;
+  background:linear-gradient(96deg,var(--terra),var(--amber) 48%,var(--gold));
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  filter:drop-shadow(0 3px 10px rgba(194,65,12,.26));
+}
+.hero .tag{font-size:1rem; color:var(--t2); margin-top:8px}
+.hero .kicker{display:inline-flex; align-items:center; gap:7px; padding:5px 14px; border-radius:999px;
+  background:rgba(194,65,12,.11); border:1px solid rgba(194,65,12,.28); color:var(--terra);
+  font-size:.73rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase}
+.step{display:flex; align-items:center; gap:11px; margin:26px 0 12px}
+.step .n{width:30px; height:30px; border-radius:9px; flex:none; display:grid; place-items:center;
+  background:linear-gradient(150deg,var(--card-hi),var(--card-lo)); color:#FDF6EC; font-weight:800; font-size:.9rem;
+  box-shadow:var(--shadow-1)}
+.step h2{font-size:1.16rem}
+.step .hint{font-size:.8rem; color:var(--t3); margin-left:auto; text-align:right}
+.pick{cursor:pointer; transition:transform .18s var(--ease), box-shadow .18s}
+.pick:hover{transform:translateY(-3px); box-shadow:var(--shadow-3)}
+.pick.sel{outline:3px solid var(--amber); outline-offset:2px}
+.pick.sel::before{
+  content:"✓"; position:absolute; top:-11px; right:-11px; z-index:3; width:28px; height:28px; border-radius:50%;
+  background:linear-gradient(150deg,var(--amber),var(--terra)); color:#fff; display:grid; place-items:center;
+  font-weight:900; font-size:.85rem; box-shadow:0 4px 12px rgba(194,65,12,.45)
+}
+.pick-head{display:flex; align-items:center; gap:12px; margin-bottom:8px}
+.pick-head .ic-lg{color:var(--amber)}
+.pick-head h3{font-size:1.1rem; margin:0}
+.spec{display:flex; justify-content:space-between; gap:10px; padding:5px 0; font-size:.815rem; border-bottom:1px dashed var(--bd)}
+.spec:last-of-type{border-bottom:none}
+.spec span{color:var(--t2)} .spec b{color:var(--t1); text-align:right}
+.risk{margin-top:9px; font-size:.755rem; color:var(--t3); display:flex; gap:7px; align-items:flex-start}
+.risk .ic{color:#FFC46B; flex:none; margin-top:1px}
+.chips{display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 4px}
+.chip{cursor:pointer; padding:8px 13px; border-radius:10px; font-size:.85rem; font-weight:700;
+  border:1px solid var(--bd-2); background:rgba(0,0,0,.16); color:var(--t1);
+  display:inline-flex; align-items:center; gap:7px; transition:transform .14s var(--ease)}
+.chip:hover{transform:translateY(-2px)}
+.chip.sel{background:linear-gradient(150deg,var(--amber),var(--terra)); color:#fff; border-color:transparent;
+  box-shadow:0 5px 14px rgba(194,65,12,.4)}
+.fields{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+.fields label{display:block; font-size:.74rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--t3); margin-bottom:6px}
+.fields input{width:100%; padding:12px 14px; border-radius:11px; font-size:1rem; font-weight:600;
+  border:1px solid var(--fieldbd); background:var(--fieldbg); color:var(--t1)}
+.fields input:focus{outline:none; border-color:var(--amber); box-shadow:0 0 0 3px rgba(232,135,30,.25)}
+
+/* ---------- Porter 2x2 matrix ---------- */
+.matrix-card{margin-top:18px}
+.matrix{display:grid; grid-template-columns:auto 1fr 1fr; grid-template-rows:auto 1fr 1fr; gap:9px; margin-top:6px}
+.mx-ch{display:grid; place-items:center; font-size:.7rem; font-weight:800; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--t3); text-align:center; padding:2px}
+.mx-rh{writing-mode:vertical-rl; transform:rotate(180deg)}
+.mx-cell{
+  border-radius:13px; padding:13px 14px; border:1.5px dashed var(--bd-2);
+  background:rgba(0,0,0,.13); transition:all .3s var(--ease); min-height:88px;
+}
+.mx-cell .n{font-weight:800; font-size:.95rem; color:var(--t2)}
+.mx-cell .x{font-size:.75rem; color:var(--t3); margin-top:3px; line-height:1.4}
+.mx-cell.on{
+  border-style:solid; border-color:transparent; transform:scale(1.035);
+  background:linear-gradient(150deg,var(--amber),var(--terra));
+  box-shadow:0 10px 26px rgba(194,65,12,.4);
+}
+.mx-cell.on .n{color:#fff} .mx-cell.on .x{color:rgba(255,255,255,.9)}
+.mid-warn{margin-top:12px; padding:11px 13px; border-radius:12px; font-size:.8rem; line-height:1.5;
+  border:1px solid rgba(255,196,107,.45); background:rgba(255,196,107,.12); color:#FFD9A0;
+  display:flex; gap:9px; align-items:flex-start}
+.mid-warn .ic{color:#FFC46B; flex:none; margin-top:2px}
+.summary{margin-top:14px; display:flex; flex-wrap:wrap; gap:10px; justify-content:center; align-items:center}
+.sum-box{padding:9px 15px; border-radius:12px; background:rgba(0,0,0,.18); border:1px solid var(--bd);
+  text-align:center; min-width:130px}
+.sum-box .k{font-size:.63rem; letter-spacing:.09em; text-transform:uppercase; color:var(--t3); font-weight:800}
+.sum-box .v{font-size:1.1rem; font-weight:800; margin-top:2px}
+
+/* ============================ MODALS ============================ */
+.scrim{position:fixed; inset:0; z-index:120; padding:18px; overflow:auto;
+  background:rgba(46,32,22,.62); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  display:flex; align-items:flex-start; justify-content:center; animation:fadeIn .2s}
+@keyframes fadeIn{from{opacity:0}}
+@keyframes popIn{from{opacity:0; transform:translateY(18px) scale(.97)}}
+.sheet{width:100%; max-width:680px; margin:auto; animation:popIn .3s var(--ease)}
+.sheet h2{font-size:1.35rem; display:flex; align-items:center; gap:10px; margin-bottom:4px}
+.sheet h2 .ic{color:var(--amber)}
+.ledger{width:100%; border-collapse:collapse; margin:10px 0}
+.ledger td{padding:7px 4px; font-size:.87rem; border-bottom:1px dashed var(--bd); color:var(--t2)}
+.ledger td:last-child{text-align:right; font-variant-numeric:tabular-nums; font-weight:700; color:var(--t1)}
+.ledger tr.tot td{border-top:1.5px solid var(--bd-2); border-bottom:none; font-weight:800; font-size:.94rem; color:var(--t1)}
+.evt{border-radius:13px; padding:13px 15px; margin:12px 0; border:1px solid var(--bd-2); background:rgba(0,0,0,.16)}
+.evt b{display:flex; align-items:center; gap:8px; font-size:.97rem}
+.evt.good{border-color:rgba(123,228,149,.5); background:rgba(123,228,149,.10)}
+.evt.bad{border-color:rgba(255,151,170,.5); background:rgba(255,151,170,.10)}
+.evt.mixed{border-color:rgba(255,196,107,.5); background:rgba(255,196,107,.10)}
+.peek{margin-top:13px; padding:13px 15px; border-radius:13px; border:1px dashed var(--bd-2); background:rgba(0,0,0,.13)}
+.peek h4{font-size:.83rem; font-weight:800; display:flex; align-items:center; gap:8px; margin-bottom:6px}
+.peek h4 .ic{color:var(--amber)}
+.peek li{list-style:none; font-size:.8rem; color:var(--t2); padding:3px 0 3px 2px; line-height:1.45}
+.qa{margin:12px 0}
+.qa .q{font-weight:700; font-size:.92rem; margin-bottom:6px}
+.opt{display:flex; align-items:center; gap:9px; padding:9px 12px; margin:5px 0; border-radius:10px; cursor:pointer;
+  border:1px solid var(--bd); background:rgba(0,0,0,.14); font-size:.88rem; transition:all .15s}
+.opt:hover{border-color:var(--amber); background:rgba(232,135,30,.13)}
+.opt input{accent-color:var(--terra); width:16px; height:16px}
+.acts{display:flex; gap:10px; margin-top:16px; flex-wrap:wrap}
+.acts .btn{flex:1; justify-content:center}
+
+/* ============================ TOASTS ============================ */
+#toasts{position:fixed; right:18px; top:78px; z-index:200; display:flex; flex-direction:column; gap:9px; max-width:330px}
+@keyframes slideIn{from{opacity:0; transform:translateX(26px)}}
+.toast{
+  background:linear-gradient(168deg,#FBF4E8,#EFE2CD); color:#3A2A1A; border:1px solid rgba(120,86,56,.3);
+  border-left:4px solid var(--amber); padding:11px 14px; border-radius:12px; font-size:.85rem; line-height:1.45;
+  box-shadow:var(--shadow-3); animation:slideIn .28s var(--ease); display:flex; gap:9px; align-items:flex-start;
+}
+.toast .ic{flex:none; margin-top:1px; color:var(--amber)}
+.toast.earn{border-left-color:#2F7D32} .toast.earn .ic{color:#2F7D32}
+.toast.spend{border-left-color:var(--terra)} .toast.spend .ic{color:var(--terra)}
+.toast.err{border-left-color:#B3261E} .toast.err .ic{color:#B3261E}
+.toast.fade{opacity:0; transform:translateX(26px); transition:all .3s}
+
+/* floating money */
+@keyframes floatUp{
+  0%{opacity:0; transform:translate(-50%,0) scale(.85)}
+  18%{opacity:1; transform:translate(-50%,-14px) scale(1.06)}
+  100%{opacity:0; transform:translate(-50%,-74px) scale(1)}
+}
+.fmoney{position:fixed; z-index:210; pointer-events:none; font-weight:900; font-size:1.25rem;
+  font-variant-numeric:tabular-nums; text-shadow:0 2px 8px rgba(0,0,0,.3); animation:floatUp 1.25s var(--ease) forwards}
+.fmoney.out{color:#C2410C} .fmoney.in{color:#2F7D32}
+
+/* ============================ END SCREENS ============================ */
+.finale{text-align:center; padding:34px 0 8px; position:relative}
+.finale h1{font-size:clamp(1.7rem,4.4vw,2.5rem)}
+.score{
+  font-size:clamp(3rem,10vw,5.2rem); font-weight:900; letter-spacing:-.035em; margin:6px 0 2px;
+  background:linear-gradient(96deg,var(--terra),var(--amber) 46%,var(--gold));
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  filter:drop-shadow(0 4px 14px rgba(194,65,12,.3)); font-variant-numeric:tabular-nums;
+}
+.score-k{font-size:.76rem; letter-spacing:.16em; text-transform:uppercase; font-weight:800; color:var(--t2)}
+.badges{display:flex; gap:11px; flex-wrap:wrap; justify-content:center; margin:18px 0 10px}
+@keyframes badgeIn{from{opacity:0; transform:scale(.7) rotate(-6deg)}}
+.badge{padding:10px 17px; border-radius:13px; font-weight:800; font-size:.92rem;
+  background:linear-gradient(168deg,#FBF4E8,#EFDFC6); color:#3A2A1A;
+  border:1.5px solid var(--gold); box-shadow:var(--shadow-2); animation:badgeIn .5s var(--ease) both}
+.verdict{margin:18px 0}
+.verdict h3 .ic{color:var(--terra)}
+.tl-list li{list-style:none; padding:7px 0 7px 15px; border-left:2px solid var(--bd-2); font-size:.845rem; color:var(--t2); line-height:1.5}
+.tl-list li b{color:var(--t1)}
+.debrief li{margin:0 0 13px 20px; font-size:.92rem; line-height:1.55; color:var(--t2)}
+.debrief li::marker{color:var(--amber); font-weight:800}
+#confetti{position:fixed; inset:0; z-index:150; pointer-events:none}
+.doom{filter:grayscale(.35)}
+.doom .card{background:linear-gradient(168deg,#5E4335,#4A3327 60%,#3C2A20)}
+
+/* ============================ GUIDE ============================ */
+.guide{font-size:.885rem; line-height:1.62; color:var(--t2)}
+.guide h3{font-size:.98rem; color:var(--t1); margin:18px 0 6px; display:flex; align-items:center; gap:8px}
+.guide h3:first-child{margin-top:0}
+.guide h3 .ic{color:var(--amber)}
+.guide b{color:var(--t1)}
+.guide ul{margin:6px 0 6px 22px}
+.guide li{margin:4px 0}
+.guide .ex{background:rgba(0,0,0,.2); border:1px solid var(--bd); border-left:3px solid var(--amber);
+  border-radius:11px; padding:12px 14px; margin:9px 0; font-size:.83rem}
+.guide .term{display:inline-block; margin:3px 5px 3px 0}
+details.fold{margin:14px 0}
+details.fold summary{cursor:pointer; font-weight:800; color:var(--terra); font-size:.92rem;
+  display:flex; align-items:center; gap:8px; list-style:none; padding:9px 0}
+details.fold summary::-webkit-details-marker{display:none}
+details.fold summary .ic{transition:transform .2s var(--ease)}
+details.fold[open] summary .ic.caret{transform:rotate(90deg)}
+
+@media (max-width:720px){
+  .grid{grid-template-columns:1fr}
+  .fields{grid-template-columns:1fr}
+  .matrix{grid-template-columns:auto 1fr; grid-template-rows:auto auto auto auto auto}
+  .mx-ch.c2{display:none}
+  .timeline{flex-wrap:wrap}
+  .tl{min-width:52px}
+  .hud-stat.hide-sm{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important}
+}
+</style>
+</head>
+<body>
+
+<!-- ==================== SVG ICON SPRITE ==================== -->
+<svg id="sprite" aria-hidden="true"><defs>
+<g id="g-str" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+</defs>
+<symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" fill="currentColor"/></symbol>
+<symbol id="i-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v10"/></symbol>
+<symbol id="i-mega" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4a1 1 0 001 1h2l5 4V5L7 9H5a1 1 0 00-1 1z"/><path d="M16 8.5a4 4 0 010 7M18.7 6a7.5 7.5 0 010 12"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0112 0M16 5.4a3 3 0 010 5.6M18.5 20a5.6 5.6 0 00-2.8-4.6"/></symbol>
+<symbol id="i-store" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h16v9a1 1 0 01-1 1H5a1 1 0 01-1-1v-9z"/><path d="M3 10l1.6-5.5h14.8L21 10M9.5 20v-5.5h5V20"/></symbol>
+<symbol id="i-wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10.5h18"/><circle cx="17" cy="14.5" r="1.3"/></symbol>
+<symbol id="i-tag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.6 3H21v8.4L11.2 21.2 2.8 12.8 12.6 3z"/><circle cx="17" cy="7" r="1.4"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16h16"/><path d="M7.5 15l3.5-4.5 3 2.6L19 6.5"/></symbol>
+<symbol id="i-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.2"/><circle cx="12" cy="12" r="4.6"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></symbol>
+<symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.2"/><path d="M3.8 12h16.4"/><path d="M12 3.8c2.2 2.4 3.4 5.2 3.4 8.2S14.2 17.8 12 20.2c-2.2-2.4-3.4-5.2-3.4-8.2S9.8 6.2 12 3.8z"/></symbol>
+<symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+<symbol id="i-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v5.5a5 5 0 01-10 0V4z"/><path d="M7 6H4.2v1.2A3.2 3.2 0 007.2 10.4M17 6h2.8v1.2a3.2 3.2 0 01-3 3.2"/><path d="M12 14.5V18M8.5 21h7M10 18h4"/></symbol>
+<symbol id="i-bulb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18.5h5M10.5 21.2h3"/><path d="M12 3a6.2 6.2 0 00-3.7 11.2c.6.5 1 1.2 1.1 2h5.2c.1-.8.5-1.5 1.1-2A6.2 6.2 0 0012 3z"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v5.8c0 4.6-3.3 8.5-8 9.7-4.7-1.2-8-5.1-8-9.7V6l8-3z"/></symbol>
+<symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.4v2.8M12 18.8v2.8M4.2 4.2l2 2M17.8 17.8l2 2M2.4 12h2.8M18.8 12h2.8M4.2 19.8l2-2M17.8 6.2l2-2"/></symbol>
+<symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 2.6l2 5.9 5.9 2-5.9 2-2 5.9-2-5.9-5.9-2 5.9-2 2-5.9z" fill="currentColor"/><path d="M19 15l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9.9-2.6z" fill="currentColor" opacity=".65"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6l9.2 16.4H2.8L12 3.6z"/><path d="M12 10v4.2M12 17.4h.01"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5 10-11"/></symbol>
+<symbol id="i-skull" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8a8.4 8.4 0 00-8.4 8.4v3l2.2 1.1v3.4a1 1 0 001 1h10.4a1 1 0 001-1v-3.4l2.2-1.1v-3A8.4 8.4 0 0012 2.8z"/><circle cx="8.8" cy="12" r="1.7" fill="currentColor"/><circle cx="15.2" cy="12" r="1.7" fill="currentColor"/></symbol>
+<symbol id="i-flag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 21.5V3"/><path d="M5.5 3.8h12.8l-2.4 4 2.4 4H5.5"/></symbol>
+<symbol id="i-money" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6.4" rx="7.2" ry="3.1"/><path d="M4.8 6.4v5c0 1.7 3.2 3.1 7.2 3.1s7.2-1.4 7.2-3.1v-5"/><path d="M4.8 11.4v5c0 1.7 3.2 3.1 7.2 3.1s7.2-1.4 7.2-3.1v-5"/></symbol>
+<symbol id="i-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></symbol>
+<symbol id="i-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.4 9.2a2.7 2.7 0 015.2.9c0 1.8-2.6 2.3-2.6 4M12 17.2h.01"/></symbol>
+<symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3.2" y="3.2" width="7.4" height="7.4" rx="1.6"/><rect x="13.4" y="3.2" width="7.4" height="7.4" rx="1.6"/><rect x="3.2" y="13.4" width="7.4" height="7.4" rx="1.6"/><rect x="13.4" y="13.4" width="7.4" height="7.4" rx="1.6"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.4 12S6 5.6 12 5.6 21.6 12 21.6 12 18 18.4 12 18.4 2.4 12 2.4 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-cap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4L2.6 8.6 12 13.2l9.4-4.6L12 4z"/><path d="M6.4 10.8v4.8c0 1.6 2.5 3 5.6 3s5.6-1.4 5.6-3v-4.8M21.4 8.6v5.4"/></symbol>
+</svg>
+
+<div class="wrap" id="app"></div>
+<div id="toasts"></div>
+
+<script id="engine">
+"use strict";
+/* ---------- seeded RNG ---------- */
+function hashStr(s){let h=1779033703^s.length;for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),3432918353);h=(h<<13)|(h>>>19);}return h>>>0;}
+function mulberry32(a){return function(){a|=0;a=(a+0x6D2B79F5)|0;let t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return ((t^(t>>>14))>>>0)/4294967296;};}
+
+const MONTH_NAMES=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const SEASON=[0.92,0.90,0.96,1.00,1.00,1.02,1.00,1.12,1.18,1.02,1.38,1.68];
+const START_CASH=30000;
+const LUCK_RANGE=0.10;               /* ±10% random variation, disclosed up front */
+
+/* ---------- competitive advantage archetypes ---------- */
+const ARCHETYPES={
+  lowcost:{
+    key:"lowcost", icon:"🎧", name:"Low-cost operator",
+    blurb:"Refurbished & off-brand goods, bare-bones fixtures, cheap lease, lean staffing. Win by having the lowest costs in town.",
+    unitCost:25, basePrice:33, unitLabel:"item",
+    baseDemand:450, staffCap:650, staffCapTrained:720,
+    startStaff:1, staffCost:1150, trainedCost:1350,
+    rent:1000, utilities:180,
+    defectRate:0.02, seasonSens:0.55, repSens:0.5,
+    mkt:{social:0.15, local:0.18, influencer:0.10, sale:0.45},
+    priceMults:{undercut:{p:0.92,d:1.30}, match:{p:1,d:1}, premium:{p:1.10,d:0.60}},
+    startup:{license:500, deposit:1500, fixtures:1400, pos:800, initUnits:380},
+    marginNote:"~15–20% (thin!)", volumeNote:"high — hundreds of items/mo", overheadNote:"low",
+    riskNote:"Thin margins + product returns. Profit comes from volume and ruthless cost control.",
+    catNames:["Phone repair parts","Prepaid SIM & top-ups"],
+    serviceName:"Phone repair counter",
+    goodScore:50000, greatScore:80000,
+  },
+  premium:{
+    key:"premium", icon:"🖥️", name:"Premium experience",
+    blurb:"Flagship brands, trained experts, showroom-quality store, prime location. Win by being worth paying more for.",
+    unitCost:1150, basePrice:2050, unitLabel:"unit",
+    baseDemand:5.2, staffCap:5, staffCapTrained:7,
+    startStaff:1, staffCost:1500, trainedCost:1800,
+    rent:2000, utilities:300,
+    defectRate:0.01, seasonSens:1.15, repSens:1.2,
+    mkt:{social:0.10, local:0.12, influencer:0.25, sale:0.05},
+    priceMults:{undercut:{p:0.90,d:1.10}, match:{p:1,d:1}, premium:{p:1.06,d:0.90}},
+    startup:{license:800, deposit:3600, fixtures:4200, pos:1500, initUnits:7},
+    marginNote:"~35–45% (fat)", volumeNote:"low — a handful of units/mo", overheadNote:"high",
+    riskNote:"Each unit ties up $1,150 of cash. One slow month hurts. Reputation and trained staff drive demand.",
+    catNames:["Premium audio","Smart-home installs"],
+    serviceName:"White-glove install & warranty desk",
+    goodScore:45000, greatScore:75000,
+  },
+};
+/* ---------- market scope ---------- */
+const NICHES={
+  gaming:{icon:"🎮", name:"Gaming", catNames:["Retro consoles","PC components"], serviceName:"Console repair & mod bench"},
+  audio:{icon:"🔊", name:"Home audio", catNames:["Vinyl & turntables","Acoustic treatment"], serviceName:"Room-tuning & install service"},
+  mobile:{icon:"📱", name:"Mobile & repair", catNames:["Cases & accessories","Trade-in program"], serviceName:"Same-day repair counter"},
+  smarthome:{icon:"🏠", name:"Smart home", catNames:["Security cameras","Smart lighting"], serviceName:"Whole-home install service"},
+};
+const SCOPE={
+  broad:{demandScale:1.0, rentScale:1.0, repGain:1.0, bigboxMult:0.85, depositScale:1.0,
+    note:"Bigger demand pool; full exposure to competition events."},
+  niche:{demandScale:0.75, rentScale:0.85, repGain:1.5, bigboxMult:0.93, depositScale:0.88,
+    note:"Smaller pool, but loyal fans, faster reputation growth, and partial protection from big-box competitors."},
+};
+function porterName(advantage,scope){
+  return advantage==="lowcost"?(scope==="broad"?"Cost Leadership":"Cost Focus")
+                              :(scope==="broad"?"Differentiation":"Differentiation Focus");
+}
+function porterDesc(advantage,scope){
+  const how=advantage==="lowcost"?"win by having the lowest costs":"win by offering an experience worth paying more for";
+  const who=scope==="broad"?"across the whole market":"inside a niche you serve better than anyone";
+  return "You "+how+", "+who+".";
+}
+
+const MARKETING={
+  none:{name:"No marketing", cost:0},
+  social:{name:"Social media ads", cost:450, desc:"Cheap reach."},
+  local:{name:"Local ads (radio/flyers)", cost:650, desc:"Reliable local traffic."},
+  influencer:{name:"Influencer unboxing", cost:1300, desc:"Moves premium product."},
+  sale:{name:"Sale event weekend", cost:800, desc:"Huge for low-cost volume."},
+};
+const IMPROVEMENTS={
+  displays:{name:"Better displays", cost:900, desc:"+5% demand permanently."},
+  demo:{name:"Demo stations", cost:1400, desc:"Let customers try products. +8% demand (+12% premium)."},
+  security:{name:"Security upgrade", cost:1200, desc:"Cuts shrinkage (theft/loss) from 2% to 0.5% of stock monthly; blunts theft events."},
+};
+const INSURANCE_COST=180;
+const SECURITY_BASE=100;
+const SERVICE_LAUNCH=1500;
+const HIRE_FEE=400, TRAIN_COST=600, SEVERANCE=300;
+const CAT_COST=800;
+const LOAN_STEP=5000, LOAN_MAX=15000, LOAN_APR=0.08, LOAN_MONTHS=12;
+const LOAN_MR=LOAN_APR/12;
+const FAM_STEP=2500, FAM_MAX=10000, FAM_RISK=0.12;
+const CROWD_COST=500;
+const INVESTOR_CASH=8000, INVESTOR_EQUITY=0.15;
+
+function loanMonthlyFor(balance){
+  return Math.ceil(balance*LOAN_MR/(1-Math.pow(1+LOAN_MR,-LOAN_MONTHS)));
+}
+
+function createGame(teamName,storeName,advantage,scope,nicheType,pricing){
+  const a=ARCHETYPES[advantage], sc=SCOPE[scope];
+  const seed=hashStr(teamName+"|"+storeName+"|"+advantage+"|"+scope+"|"+(nicheType||""));
+  const st={
+    teamName, storeName, advantage, scope, nicheType:scope==="niche"?nicheType:null, pricing,
+    seed, _rng:mulberry32(seed),
+    month:0, phase:"decide", gameOver:false, bankrupt:false,
+    cash:START_CASH,
+    units:0, invCost:a.unitCost,
+    staff:a.startStaff, trained:0,
+    rep:50,
+    coherence:100, cohBonus:0, cohHistory:[], cohLog:[], monthIncoherent:false,
+    bank:{balance:0, payment:0, borrowed:0},
+    fam:{balance:0, lastBorrowMonth:-9, planRemaining:0, planMonthly:0},
+    equity:0,
+    insurance:false, security:false, displays:false, demo:false,
+    services:false, serviceLevel:0, cats:0,
+    marketing:"none",
+    costHike:0, nextDemandBonus:0, discountStock:false, competitor:false,
+    crowdUsed:false, crowdPending:0,
+    investorRounds:0, investorLastFail:-9,
+    bulkOffer:null, bulkPending:null,
+    liquidatedThisMonth:false,
+    priceChangeMonths:[],
+    lastEventNeg:false, lastEventId:null, firedOnce:{},
+    monthSpend:{}, minCash:START_CASH,
+    history:[], log:[], startupBill:null, famEmergency:null,
+  };
+  /* startup purchases — scope adjusts deposit/inventory sizing */
+  const su=a.startup;
+  const initUnits=Math.round(su.initUnits*(scope==="niche"?0.78:1));
+  const deposit=Math.round(su.deposit*sc.depositScale/50)*50;
+  st.units=initUnits;
+  const inv=initUnits*a.unitCost;
+  const bill=[["Business license & permits",su.license],["Store lease deposit"+(advantage==="premium"?" (prime location)":""),deposit],
+    ["Shelving, fixtures & security"+(advantage==="premium"?" (showroom grade)":""),su.fixtures],["Point-of-sale system",su.pos],
+    ["Initial inventory ("+initUnits+" "+a.unitLabel+"s)",inv]];
+  const total=bill.reduce((x,b)=>x+b[1],0);
+  st.cash-=total;
+  st.startupBill={items:bill,total};
+  st.log.push({m:0,txt:"Opened "+storeName+" — "+porterName(advantage,scope)+(st.nicheType?" ("+NICHES[st.nicheType].name+" niche)":"")+". Startup costs $"+total.toLocaleString()+"."});
+  st.minCash=Math.min(st.minCash,st.cash);
+  return st;
+}
+
+function arch(st){return ARCHETYPES[st.advantage];}
+function scopeOf(st){return SCOPE[st.scope];}
+function catNames(st){return st.nicheType?NICHES[st.nicheType].catNames:arch(st).catNames;}
+function serviceName(st){return st.nicheType?NICHES[st.nicheType].serviceName:arch(st).serviceName;}
+function rng(st){return st._rng();}
+function repUp(st,amt){st.rep=Math.min(95,st.rep+amt*scopeOf(st).repGain);return amt*scopeOf(st).repGain;}
+function repDown(st,amt){st.rep=Math.max(5,st.rep-amt);}
+
+function price(st){
+  const a=arch(st);
+  let p=a.basePrice*a.priceMults[st.pricing].p;
+  if(st.discountStock) p*=0.88;
+  return p;
+}
+function staffCapacity(st){
+  const a=arch(st);
+  return (st.staff-st.trained)*a.staffCap + st.trained*a.staffCapTrained;
+}
+function rentOf(st){return Math.round(arch(st).rent*scopeOf(st).rentScale/10)*10;}
+function burnRate(st){
+  const a=arch(st);
+  let b=rentOf(st)+a.utilities+SECURITY_BASE;
+  b+=(st.staff-st.trained)*a.staffCost + st.trained*a.trainedCost;
+  if(st.insurance)b+=INSURANCE_COST;
+  b+=Math.min(st.bank.balance>0?st.bank.payment:0, st.bank.balance+Math.round(st.bank.balance*LOAN_MR));
+  b+=Math.min(st.fam.planRemaining, st.fam.planMonthly);
+  return Math.round(b);
+}
+function inventoryValue(st){return Math.round(st.units*st.invCost);}
+function effUnitCost(st){return Math.round(arch(st).unitCost*(st.costHike>0?1.10:1));}
+function seasonMult(st,m){return 1+(SEASON[m]-1)*arch(st).seasonSens;}
+function totalDebt(st){return Math.round(st.bank.balance+st.fam.balance);}
+function seasonLabel(m){
+  if(m===10||m===11)return"🎄 HOLIDAY SURGE — biggest demand of the year!";
+  if(m===7||m===8)return"🎒 Back-to-school bump";
+  if(m===9)return"🎄 Holiday season starts next month — stock up NOW!";
+  if(m===6)return"Back-to-school bump starts next month";
+  if(m===0||m===1)return"❄️ Post-holiday slump — demand is soft";
+  return"Normal season";
+}
+
+/* ---------- strategy coherence ---------- */
+function clarityOf(coh){return coh>=80?"strong":coh>=50?"wobble":"stuck";}
+function clarityLabel(coh){return coh>=80?"Strong":coh>=50?"Wobbling":"Stuck in the middle";}
+function addIncoherence(st,pts,why){
+  st.coherence=Math.max(0,st.coherence-pts);
+  st.monthIncoherent=true;
+  st.cohLog.push({m:st.month,why,pts});
+  return "⚠️ Off-strategy: "+why+" (clarity −"+pts+")";
+}
+function coherenceDemandFactor(st){
+  return clarityOf(st.coherence)==="stuck"?0.90:1+st.cohBonus/100;
+}
+function isOffStrategy(st,what){ /* used by UI to label options before purchase */
+  if(st.advantage==="lowcost")return what==="influencer"||what==="demo"||what==="premiumPricing";
+  return what==="sale"||what==="undercutPricing"||what==="liquidate";
+}
+
+/* ---------- demand stack (single source of truth for projection AND results) ---------- */
+function demandStack(st,luck){
+  const a=arch(st);
+  const items=[];
+  const base=Math.round(a.baseDemand*scopeOf(st).demandScale*(1+0.10*st.cats));
+  items.push({label:"Base demand"+(st.cats?" (incl. "+st.cats+" extra product line"+(st.cats>1?"s":"")+")":"")+(st.scope==="niche"?" — "+NICHES[st.nicheType].name+" niche":""),
+    kind:"base", value:base});
+  let d=base;
+  function f(label,mult){
+    if(Math.abs(mult-1)<0.0005)return;
+    items.push({label,kind:"pct",pct:Math.round((mult-1)*100)});
+    d*=mult;
+  }
+  f("Seasonality ("+MONTH_NAMES[st.month]+")",seasonMult(st,st.month));
+  f("Pricing: "+st.pricing,a.priceMults[st.pricing].d);
+  if(st.marketing!=="none")f(MARKETING[st.marketing].name,1+a.mkt[st.marketing]);
+  f("Reputation ("+Math.round(st.rep)+"/100)",Math.max(0.3,1+(st.rep-50)/100*a.repSens));
+  const impf=1+(st.displays?0.05:0)+(st.demo?(st.advantage==="premium"?0.12:0.08):0);
+  f("Store upgrades",impf);
+  if(st.nextDemandBonus)f("Event traffic",1+st.nextDemandBonus);
+  if(st.competitor)f("Big-box competitor"+(st.scope==="niche"?" (niche protection)":""),scopeOf(st).bigboxMult);
+  const coh=coherenceDemandFactor(st);
+  if(clarityOf(st.coherence)==="stuck")
+    items.push({label:"Customers are confused about what your store stands for",kind:"pct",pct:-10}),d*=0.90;
+  else if(st.cohBonus>0)
+    items.push({label:"Strategy clarity — customers know what you stand for",kind:"pct",pct:st.cohBonus}),d*=coh;
+  if(luck!==null&&luck!==undefined){
+    items.push({label:"Random variation this month",kind:"pct",pct:Math.round((luck-1)*100)});
+    d*=luck;
+  }
+  return {items, demand:Math.round(d),
+    low:Math.round(d*(1-LUCK_RANGE)), high:Math.round(d*(1+LUCK_RANGE))};
+}
+function projectedServiceRev(st){
+  return st.services?Math.round(st.serviceLevel*(0.7+st.rep/100*0.6)):0;
+}
+function projectRevenue(st){
+  const stk=demandStack(st,null);
+  const cap=Math.round(staffCapacity(st));
+  const p=price(st);
+  const a=arch(st);
+  const soldLow=Math.min(stk.low,st.units,cap), soldHigh=Math.min(stk.high,st.units,cap);
+  const revLow=Math.round(soldLow*p*(1-a.defectRate))+projectedServiceRev(st);
+  const revHigh=Math.round(soldHigh*p*(1-a.defectRate))+projectedServiceRev(st);
+  let binding=null;
+  if(st.units<stk.low)binding="inventory";
+  else if(cap<stk.low)binding="staff";
+  else if(st.units<stk.high)binding="inventory-high";
+  else if(cap<stk.high)binding="staff-high";
+  return {stack:stk, cap, price:Math.round(p), soldLow, soldHigh, revLow, revHigh, binding};
+}
+
+/* ---------- month start: recurring bills ---------- */
+function startMonth(st){
+  const a=arch(st), lines=[];
+  st.phase="decide"; st.marketing="none"; st.liquidatedThisMonth=false;
+  st.monthSpend={}; st.monthIncoherent=false; st.famEmergency=null;
+  lines.push(["Rent",rentOf(st)],["Payroll ("+st.staff+" staff)",(st.staff-st.trained)*a.staffCost+st.trained*a.trainedCost],
+    ["Utilities",a.utilities],["Security system",SECURITY_BASE]);
+  if(st.insurance)lines.push(["Insurance premium",INSURANCE_COST]);
+  if(st.bank.balance>0){
+    const interest=Math.round(st.bank.balance*LOAN_MR);
+    const pay=Math.min(st.bank.balance+interest,st.bank.payment);
+    st.bank.balance=Math.max(0,st.bank.balance+interest-pay);
+    if(st.bank.balance<1){st.bank.balance=0;st.bank.payment=0;}
+    lines.push(["Bank loan payment (incl. $"+interest+" interest)",pay]);
+  }
+  if(st.fam.planRemaining>0){
+    const pay=Math.min(st.fam.planRemaining,st.fam.planMonthly);
+    st.fam.planRemaining-=pay;st.fam.balance=Math.max(0,st.fam.balance-pay);
+    lines.push(["Family payment plan",pay]);
+  }
+  const total=lines.reduce((x,b)=>x+b[1],0);
+  st.cash-=total;
+  st.recurring={lines,total};
+  if(st.crowdPending>0){
+    st.cash+=st.crowdPending;
+    st.log.push({m:st.month,txt:"Crowdfunding paid out $"+st.crowdPending.toLocaleString()+"."});
+    st.crowdCollected=st.crowdPending; st.crowdPending=0;
+  } else st.crowdCollected=0;
+  if(st.bulkPending){
+    st.cash+=st.bulkPending.payout;
+    st.log.push({m:st.month,txt:"Corporate bulk order delivered: +$"+st.bulkPending.payout.toLocaleString()+"."});
+    st.bulkPaid=st.bulkPending.payout; st.bulkPending=null;
+  } else st.bulkPaid=0;
+  /* family emergency — never in the borrow month, never in the first 3 months */
+  if(st.fam.balance>0&&st.fam.planRemaining<=0&&st.month>=3&&st.month!==st.fam.lastBorrowMonth){
+    if(rng(st)<FAM_RISK){
+      const need=Math.round(st.fam.balance*0.25);
+      if(st.cash>need+1){
+        st.cash-=need;st.fam.balance-=need;
+        st.famEmergency={paid:true,amount:need,
+          txt:"Family emergency! They needed 25% of their money back — you paid $"+need.toLocaleString()+" on the spot."};
+      }else{
+        repDown(st,5);
+        st.fam.planRemaining=need;st.fam.planMonthly=Math.ceil(need/4);
+        st.famEmergency={paid:false,amount:need,
+          txt:"Family emergency! They needed $"+need.toLocaleString()+" back NOW and you couldn't pay. Word got around (reputation −5) and you're forced onto a payment plan of $"+st.fam.planMonthly.toLocaleString()+"/mo until it's covered."};
+      }
+      st.log.push({m:st.month,txt:"EVENT — "+st.famEmergency.txt});
+    }
+  }
+  st.minCash=Math.min(st.minCash,st.cash);
+  if(st.cash<=0){bankrupt(st,"Monthly bills of $"+total.toLocaleString()+" drained the last of the cash.");}
+  return {lines,total};
+}
+
+/* ---------- decision actions (all return {ok,msg}) ---------- */
+function spend(st,amount,label,cat){
+  if(st.gameOver)return{ok:false,msg:"Game over."};
+  if(amount>st.cash)return{ok:false,msg:"Not enough cash — that costs $"+amount.toLocaleString()+" and you have $"+Math.round(st.cash).toLocaleString()+"."};
+  st.cash-=amount;
+  st.monthSpend[cat]=(st.monthSpend[cat]||0)+amount;
+  st.log.push({m:st.month,txt:label+" (−$"+amount.toLocaleString()+")"});
+  st.minCash=Math.min(st.minCash,st.cash);
+  if(st.cash<=0){bankrupt(st,label+" spent the last of the cash.");}
+  return{ok:true};
+}
+function orderInventory(st,units){
+  units=Math.max(0,Math.round(units));
+  if(units===0)return{ok:false,msg:"Enter a quantity first."};
+  const uc=effUnitCost(st), cost=units*uc;
+  const r=spend(st,cost,"Ordered "+units+" "+arch(st).unitLabel+"s @ $"+uc,"inventory");
+  if(!r.ok)return r;
+  st.invCost=(st.invCost*st.units+uc*units)/(st.units+units);
+  st.units+=units;
+  return{ok:true,msg:"Stock arrived: +"+units};
+}
+function setMarketing(st,id){
+  if(id===st.marketing)return{ok:true};
+  if(st.marketing!=="none")return{ok:false,msg:"You already booked "+MARKETING[st.marketing].name+" this month."};
+  const mk=MARKETING[id];
+  const r=spend(st,mk.cost,"Booked "+mk.name,"marketing");
+  if(!r.ok)return r;
+  st.marketing=id;
+  let note=null;
+  if(st.advantage==="lowcost"&&id==="influencer")
+    note=addIncoherence(st,12,"influencer campaigns clash with your no-frills positioning");
+  if(st.advantage==="premium"&&id==="sale"){
+    repDown(st,3);
+    note=addIncoherence(st,12,"discount weekends cheapen your premium brand (also −3 reputation)");
+  }
+  return{ok:true,msg:note};
+}
+function hireStaff(st){
+  const r=spend(st,HIRE_FEE,"Hired a new employee","staffing");
+  if(!r.ok)return r;
+  st.staff++;return{ok:true};
+}
+function trainStaff(st){
+  if(st.trained>=st.staff)return{ok:false,msg:"Everyone is already trained."};
+  const r=spend(st,TRAIN_COST,"Sent an employee to product training","staffing");
+  if(!r.ok)return r;
+  st.trained++;return{ok:true};
+}
+function layoffStaff(st){
+  if(st.staff<=1)return{ok:false,msg:"You need at least one employee to run the register."};
+  const r=spend(st,SEVERANCE,"Laid off an employee (severance)","staffing");
+  if(!r.ok)return r;
+  st.staff--; if(st.trained>st.staff)st.trained=st.staff;
+  repDown(st,1);
+  return{ok:true};
+}
+function buyImprovement(st,id){
+  if(st[id])return{ok:false,msg:"Already installed."};
+  const im=IMPROVEMENTS[id];
+  const r=spend(st,im.cost,"Installed "+im.name.toLowerCase(),"improvements");
+  if(!r.ok)return r;
+  st[id]=true;
+  let note=null;
+  if(id==="demo"&&st.advantage==="lowcost")
+    note=addIncoherence(st,10,"fancy demo stations confuse bargain hunters");
+  return{ok:true,msg:note};
+}
+function launchServices(st){
+  if(st.services)return{ok:false,msg:"Already running."};
+  const r=spend(st,SERVICE_LAUNCH,"Launched "+serviceName(st).toLowerCase(),"services");
+  if(!r.ok)return r;
+  st.services=true;st.serviceLevel=500;return{ok:true};
+}
+function addCategory(st){
+  if(st.cats>=2)return{ok:false,msg:"You already carry both adjacent categories."};
+  const name=catNames(st)[st.cats];
+  const r=spend(st,CAT_COST,"Added product line: "+name,"inventory");
+  if(!r.ok)return r;
+  st.cats++;return{ok:true,msg:name+" added — +10% base demand."};
+}
+function setInsurance(st,on){
+  if(on===st.insurance)return{ok:true};
+  st.insurance=on;
+  st.log.push({m:st.month,txt:on?"Bought business insurance ($"+INSURANCE_COST+"/mo).":"Cancelled insurance."});
+  return{ok:true};
+}
+function setPricing(st,p){
+  if(p===st.pricing)return{ok:true};
+  st.pricing=p;
+  st.log.push({m:st.month,txt:"Pricing strategy → "+p+"."});
+  let note=null;
+  st.priceChangeMonths.push(st.month);
+  const recent=st.priceChangeMonths.filter(m=>st.month-m<3).length;
+  if(recent>=2)note=addIncoherence(st,5,"price flip-flopping confuses customers");
+  if(st.advantage==="premium"&&p==="undercut"){
+    repDown(st,4);
+    note=addIncoherence(st,8,"slashing prices damages a premium brand (also −4 reputation)");
+  }
+  return{ok:true,msg:note};
+}
+/* ---------- fundraising ---------- */
+function takeLoan(st){
+  if(st.bank.borrowed+LOAN_STEP>LOAN_MAX)return{ok:false,msg:"The bank won't lend beyond $"+LOAN_MAX.toLocaleString()+" total."};
+  st.bank.borrowed+=LOAN_STEP;st.bank.balance+=LOAN_STEP;st.cash+=LOAN_STEP;
+  st.bank.payment=loanMonthlyFor(st.bank.balance);
+  st.log.push({m:st.month,txt:"Took a $"+LOAN_STEP.toLocaleString()+" bank loan — new payment $"+st.bank.payment.toLocaleString()+"/mo (8% APR, 12 months)."});
+  return{ok:true,msg:"+$5,000 cash. Payments of $"+st.bank.payment.toLocaleString()+"/mo start next month."};
+}
+function payOffLoan(st){
+  if(st.bank.balance<=0)return{ok:false,msg:"No bank balance to pay off."};
+  const owed=Math.round(st.bank.balance);
+  if(owed>st.cash)return{ok:false,msg:"Paying off the loan costs $"+owed.toLocaleString()+" — you have $"+Math.round(st.cash).toLocaleString()+"."};
+  st.cash-=owed;st.bank.balance=0;st.bank.payment=0;
+  st.log.push({m:st.month,txt:"Paid off the bank loan early (−$"+owed.toLocaleString()+")."});
+  st.minCash=Math.min(st.minCash,st.cash);
+  return{ok:true,msg:"Loan cleared — no more monthly payments."};
+}
+function borrowFamily(st){
+  if(st.fam.balance+FAM_STEP>FAM_MAX)return{ok:false,msg:"Family & friends can lend at most $"+FAM_MAX.toLocaleString()+" outstanding."};
+  st.fam.balance+=FAM_STEP;st.cash+=FAM_STEP;st.fam.lastBorrowMonth=st.month;
+  st.log.push({m:st.month,txt:"Borrowed $"+FAM_STEP.toLocaleString()+" from family & friends (0% interest, repay on demand)."});
+  return{ok:true,msg:"+$2,500 at 0% — but while you owe them, they might need it back suddenly."};
+}
+function repayFamily(st,all){
+  if(st.fam.balance<=0)return{ok:false,msg:"You don't owe family anything."};
+  const amt=all?Math.round(st.fam.balance):Math.min(FAM_STEP,Math.round(st.fam.balance));
+  if(amt>st.cash)return{ok:false,msg:"That repayment costs $"+amt.toLocaleString()+" — you have $"+Math.round(st.cash).toLocaleString()+"."};
+  st.cash-=amt;st.fam.balance-=amt;
+  if(st.fam.balance<=st.fam.planRemaining){st.fam.planRemaining=Math.max(0,Math.round(st.fam.balance));if(st.fam.planRemaining===0)st.fam.planMonthly=0;}
+  st.log.push({m:st.month,txt:"Repaid family & friends $"+amt.toLocaleString()+"."});
+  st.minCash=Math.min(st.minCash,st.cash);
+  return{ok:true,msg:"Repaid $"+amt.toLocaleString()+" — that money no longer carries emergency risk."};
+}
+function investorQuestions(st){
+  const a=arch(st);
+  const burn=burnRate(st);
+  const margin=Math.round((1-a.unitCost/price(st))*100);
+  const runway=Math.max(0,Math.floor(st.cash/Math.max(1,burn)));
+  function opts(correct,fmt){
+    const set=[correct,Math.round(correct*0.6),Math.round(correct*1.5)];
+    const r=mulberry32(st.seed+st.month*7)();
+    if(r>0.66)set.push(set.shift());else if(r>0.33)set.unshift(set.pop());
+    return set.map(v=>({v,label:fmt(v),correct:v===correct}));
+  }
+  return[
+    {q:"What is your monthly burn rate (recurring costs)?",opts:opts(burn,v=>"$"+v.toLocaleString())},
+    {q:"What is your gross margin per sale right now?",opts:opts(margin,v=>v+"%")},
+    {q:"At current burn, how many months of runway does your cash cover?",opts:opts(Math.max(1,runway),v=>v+" month"+(v===1?"":"s"))},
+  ];
+}
+function pitchInvestor(st,correctCount){
+  if(st.investorRounds>=2)return{ok:false,msg:"Investors are tapped out (max 2 rounds)."};
+  if(st.month-st.investorLastFail<2)return{ok:false,msg:"Investors want to see progress — try again in a month or two."};
+  if(correctCount>=2){
+    st.cash+=INVESTOR_CASH;st.equity+=INVESTOR_EQUITY;st.investorRounds++;
+    st.log.push({m:st.month,txt:"Investor pitch succeeded: +$"+INVESTOR_CASH.toLocaleString()+" for "+(INVESTOR_EQUITY*100)+"% equity."});
+    return{ok:true,success:true,msg:"They're in! +$"+INVESTOR_CASH.toLocaleString()+" for 15% of the company."};
+  }
+  st.investorLastFail=st.month;
+  st.log.push({m:st.month,txt:"Investor pitch failed — you didn't know your own numbers."});
+  return{ok:true,success:false,msg:"They passed. Know your numbers and try again later."};
+}
+function runCrowdfunding(st){
+  if(st.crowdUsed)return{ok:false,msg:"You already ran your one campaign."};
+  const r=spend(st,CROWD_COST,"Launched crowdfunding campaign","fundraising");
+  if(!r.ok)return r;
+  st.crowdUsed=true;
+  const roll=rng(st);
+  st.crowdPending=Math.round((500+roll*3800)*(0.5+st.rep/100));
+  return{ok:true,msg:"Campaign live — backers pay out at the start of next month."};
+}
+function liquidate(st){
+  if(st.liquidatedThisMonth)return{ok:false,msg:"You already ran a lot sale this month."};
+  const sell=Math.floor(st.units*0.3);
+  if(sell<1)return{ok:false,msg:"Not enough stock to liquidate."};
+  const cashIn=Math.round(sell*st.invCost*0.7);
+  st.units-=sell;st.cash+=cashIn;st.liquidatedThisMonth=true;
+  repDown(st,1);
+  let note=null;
+  if(st.advantage==="premium")note=addIncoherence(st,5,"parking-lot fire sales look desperate for a premium store");
+  st.log.push({m:st.month,txt:"Parking-lot liquidation: sold "+sell+" units below cost for $"+cashIn.toLocaleString()+" (−1 rep)."});
+  return{ok:true,msg:"+$"+cashIn.toLocaleString()+" cash, −"+sell+" units (sold below cost)."+(note?" "+note:"")};
+}
+function acceptBulkOrder(st){
+  const o=st.bulkOffer;
+  if(!o)return{ok:false,msg:"No offer on the table."};
+  const cost=o.units*effUnitCost(st);
+  const r=spend(st,cost,"Bought "+o.units+" units for the corporate bulk order","inventory");
+  if(!r.ok)return r;
+  st.bulkPending={payout:o.payout};
+  st.bulkOffer=null;
+  return{ok:true,msg:"Deal! $"+o.payout.toLocaleString()+" lands at the start of next month."};
+}
+function declineBulkOrder(st){st.bulkOffer=null;return{ok:true};}
+
+/* ---------- month end: revenue + event ---------- */
+function endMonth(st){
+  if(st.gameOver)return null;
+  const a=arch(st);
+  const m=st.month;
+  /* recurring incoherence from standing pricing choices */
+  if(st.advantage==="lowcost"&&st.pricing==="premium")
+    addIncoherence(st,6,"premium prices on off-brand goods");
+  if(st.advantage==="premium"&&st.pricing==="undercut")
+    addIncoherence(st,6,"running a premium showroom at discount prices");
+  /* demand — same stack players saw, plus the random roll */
+  const luck=1-LUCK_RANGE+rng(st)*2*LUCK_RANGE;
+  const stk=demandStack(st,luck);
+  const demand=stk.demand;
+  const cap=Math.round(staffCapacity(st));
+  const sold=Math.min(demand,st.units,cap);
+  const p=price(st);
+  const revenue=Math.round(sold*p);
+  const returns=Math.round(revenue*a.defectRate);
+  let serviceRev=0;
+  if(st.services){
+    serviceRev=Math.round(st.serviceLevel*(0.7+st.rep/100*0.6));
+    st.serviceLevel=Math.min(1100,st.serviceLevel+75);
+  }
+  const cogs=Math.round(sold*st.invCost);
+  st.units-=sold;
+  const shrinkPct=st.security?0.005:0.02;
+  const shrunk=Math.floor(st.units*shrinkPct + (rng(st)<(st.units*shrinkPct%1)?1:0));
+  const shrinkCost=Math.round(shrunk*st.invCost);
+  st.units-=shrunk;
+  st.cash+=revenue-returns+serviceRev;
+  /* reputation drift */
+  let repNotes=[];
+  if(demand>0&&sold<demand*0.8){const hit=st.advantage==="lowcost"?1:2;repDown(st,hit);repNotes.push("Customers left empty-handed (stockout) −"+hit);}
+  if(st.advantage==="lowcost"){repDown(st,0.3);repNotes.push("Cheap-product returns −0.3");}
+  if(st.trained>0){const g=(st.advantage==="premium"?1.0:0.8)*Math.min(st.trained,2);const got=repUp(st,g);repNotes.push("Trained staff +"+got.toFixed(1));}
+  if(st.services){const got=repUp(st,0.5);repNotes.push("Service desk +"+got.toFixed(1));}
+  if(st.advantage==="premium"&&st.pricing==="premium"){const got=repUp(st,0.5);repNotes.push("Premium positioning +"+got.toFixed(1));}
+  st.rep=Math.max(5,Math.min(95,st.rep));
+  /* coherence recovery + clarity bonus */
+  if(!st.monthIncoherent)st.coherence=Math.min(100,st.coherence+5);
+  const clarity=clarityOf(st.coherence);
+  if(clarity==="strong")st.cohBonus=Math.min(10,st.cohBonus+1);
+  else if(clarity==="wobble")st.cohBonus=Math.max(0,st.cohBonus-2);
+  else st.cohBonus=Math.max(0,st.cohBonus-4);
+  st.cohHistory.push({m,coherence:Math.round(st.coherence),clarity});
+  /* clear one-month modifiers */
+  st.nextDemandBonus=0;
+  const wasDiscounted=st.discountStock;st.discountStock=false;
+  if(st.costHike>0)st.costHike--;
+  /* P&L */
+  const spent=st.monthSpend;
+  const opEx=(st.recurring?st.recurring.total:0)
+    +(spent.marketing||0)+(spent.staffing||0)+(spent.improvements||0)
+    +(spent.services||0)+(spent.fundraising||0);
+  const profit=revenue-returns+serviceRev-cogs-opEx-shrinkCost;
+  const report={
+    month:m, demand, sold, cap, unitsLeft:st.units, price:Math.round(p),
+    revenue, returns, serviceRev, cogs, shrinkCost, shrunk,
+    opEx, profit, stack:stk, luck, wasDiscounted, repNotes, event:null,
+  };
+  report.event=maybeEvent(st);
+  st.minCash=Math.min(st.minCash,st.cash);
+  st.history.push({m,revenue:revenue-returns+serviceRev,cogs:cogs+shrinkCost,opEx,profit,cashEnd:Math.round(st.cash),
+    invValue:inventoryValue(st),sold,demand,rep:Math.round(st.rep),coherence:Math.round(st.coherence)});
+  if(st.cash<=0&&!st.gameOver){bankrupt(st,"Month-end losses wiped out the cash.");}
+  else if(m===11){st.gameOver=true;st.phase="won";}
+  else{st.month++;st.phase="bills";}
+  return report;
+}
+
+/* ---------- next-month preview (shown on the results screen) ---------- */
+function nextMonthPreview(st,justResolved){
+  if(st.gameOver)return null;
+  const m=st.month; /* already advanced */
+  const items=[];
+  const sNow=seasonMult(st,justResolved.month), sNext=seasonMult(st,m);
+  const delta=Math.round((sNext/sNow-1)*100);
+  if(delta!==0)items.push((delta>0?"📈 ":"📉 ")+MONTH_NAMES[m]+" seasonality: "+(delta>0?"+":"")+delta+"% demand vs this month"+((m===10||m===11)?" — holiday surge!":""));
+  else items.push("Seasonality steady in "+MONTH_NAMES[m]+".");
+  if(justResolved.stack.items.some(i=>/ads|unboxing|Sale event/i.test(i.label))){
+    const mk=justResolved.stack.items.find(i=>/ads|unboxing|Sale event/i.test(i.label));
+    items.push("⏳ "+mk.label+" boost ends: −"+mk.pct+"% next month unless you book again.");
+  }
+  if(st.nextDemandBonus>0)items.push("🎉 Incoming event traffic: +"+Math.round(st.nextDemandBonus*100)+"% next month.");
+  if(st.discountStock)items.push("🏷️ Your current stock sells at a 12% discount next month (last-gen models).");
+  if(st.costHike>0)items.push("📈 Supplier prices stay +10% for "+st.costHike+" more month"+(st.costHike>1?"s":"")+".");
+  if(st.bank.balance>0)items.push("🏦 Bank payment due: $"+Math.min(st.bank.balance+Math.round(st.bank.balance*LOAN_MR),st.bank.payment).toLocaleString()+" (balance $"+Math.round(st.bank.balance).toLocaleString()+").");
+  if(st.fam.planRemaining>0)items.push("👪 Family payment plan: $"+Math.min(st.fam.planRemaining,st.fam.planMonthly).toLocaleString()+"/mo until $"+st.fam.planRemaining.toLocaleString()+" is covered.");
+  else if(st.fam.balance>0)items.push("👪 You owe family $"+Math.round(st.fam.balance).toLocaleString()+" — each month there's a small chance they need 25% back on the spot.");
+  items.push("💸 Recurring bills next month: ~$"+burnRate(st).toLocaleString()+".");
+  return items;
+}
+
+/* ---------- events ---------- */
+const EVENTS=[
+  {id:"release",w:3,neg:false,kind:"mixed",title:"📦 Major new model release!",
+   can:st=>st.units>0,
+   apply(st){st.discountStock=true;st.nextDemandBonus+=0.25;
+     return"A hot new flagship just launched. Your current stock is last-gen — next month it sells at a 12% discount, but launch hype brings +25% foot traffic.";}},
+  {id:"theft",w:2,neg:true,kind:"bad",title:"🚨 Shoplifting incident",
+   can:st=>st.units>2,
+   apply(st){const pct=st.security?0.02:0.10;const lost=Math.max(1,Math.floor(st.units*pct));
+     st.units-=lost;const val=Math.round(lost*st.invCost);let txt="Thieves hit the store overnight: "+lost+" units gone ($"+val.toLocaleString()+" of stock).";
+     if(st.security)txt+=" Your security upgrade kept the damage small.";
+     if(st.insurance){const back=Math.round(val*0.8);st.cash+=back;txt+=" Insurance reimbursed $"+back.toLocaleString()+".";}
+     return txt;}},
+  {id:"recall",w:2,neg:true,kind:"bad",title:"⚠️ Product recall",
+   can:st=>st.units>3,
+   apply(st){const lost=Math.max(1,Math.floor(st.units*0.06));st.units-=lost;
+     const val=Math.round(lost*st.invCost);
+     repDown(st,st.insurance?2:4);
+     let txt="A supplier recalled an item you stock. "+lost+" units pulled from shelves ($"+val.toLocaleString()+"). Reputation −"+(st.insurance?2:4)+".";
+     if(st.insurance){const back=Math.round(val*0.6);st.cash+=back;txt+=" Insurance covered $"+back.toLocaleString()+".";}
+     return txt;}},
+  {id:"hike",w:2,neg:true,kind:"bad",title:"📈 Supplier price hike",
+   can:st=>true,
+   apply(st){st.costHike=2;return"A component shortage pushed wholesale prices up 10% for the next 2 months. Restocking just got expensive.";}},
+  {id:"bigbox",w:1.5,neg:true,kind:"bad",title:"🏬 Big-box competitor opens nearby",
+   can:st=>!st.competitor&&st.month>=4,once:true,
+   apply(st){st.competitor=true;
+     const hit=Math.round((1-scopeOf(st).bigboxMult)*100);
+     return"A national chain opened two blocks away. Demand drops "+hit+"% for the rest of the year"+
+       (st.scope==="niche"?" — your loyal niche following blunts most of the damage.":" — differentiate or die.");}},
+  {id:"viral",w:2,neg:false,kind:"good",title:"🌟 Viral review!",
+   can:st=>true,
+   apply(st){const got=repUp(st,6);st.nextDemandBonus+=0.25;
+     return"A local creator's glowing review of your store blew up. Reputation +"+got.toFixed(0)+" and +25% traffic next month.";}},
+  {id:"bulk",w:2,neg:false,kind:"good",title:"💼 Corporate bulk-order opportunity",
+   can:st=>!st.bulkPending&&!st.bulkOffer,
+   apply(st){const a=arch(st);const units=st.advantage==="lowcost"?150:3;
+     const cost=units*effUnitCost(st);const payout=Math.round(units*a.basePrice*1.10);
+     st.bulkOffer={units,cost,payout};
+     return"A local company wants "+units+" units next month. Buy the stock now for ~$"+cost.toLocaleString()+" and they'll pay $"+payout.toLocaleString()+" — decide in next month's turn.";}},
+  {id:"poach",w:1.5,neg:true,kind:"bad",title:"🏃 Key employee poached",
+   can:st=>st.staff>=2||st.trained>=1,
+   apply(st){if(st.trained>0){st.trained--;st.staff=Math.max(1,st.staff-1);}else st.staff=Math.max(1,st.staff-1);
+     repDown(st,2);
+     return"A competitor hired away one of your best people. Staff −1, reputation −2. Regulars notice.";}},
+  {id:"expo",w:1.5,neg:false,kind:"good",title:"🎪 Tech expo comes to town",
+   can:st=>true,
+   apply(st){st.nextDemandBonus+=0.15;return"A regional tech expo is bringing gadget lovers downtown next month: +15% traffic.";}},
+];
+function maybeEvent(st){
+  const roll=rng(st);
+  const m=st.month;
+  if(m===0)return null;
+  if(roll>0.45)return null;
+  let pool=EVENTS.filter(e=>(!e.once||!st.firedOnce[e.id])&&e.id!==st.lastEventId&&e.can(st));
+  if(m<=2)pool=pool.filter(e=>!e.neg);
+  else if(m<=4&&st.lastEventNeg)pool=pool.filter(e=>!e.neg);
+  if(!pool.length)return null;
+  const tw=pool.reduce((x,e)=>x+e.w,0);
+  let r=rng(st)*tw,ev=pool[0];
+  for(const e of pool){r-=e.w;if(r<=0){ev=e;break;}}
+  const desc=ev.apply(st);
+  st.lastEventNeg=ev.neg;st.lastEventId=ev.id;
+  if(ev.once)st.firedOnce[ev.id]=true;
+  st.log.push({m,txt:"EVENT — "+ev.title.replace(/^\S+\s/,"")+": "+desc});
+  st.minCash=Math.min(st.minCash,st.cash);
+  return{title:ev.title,desc,kind:ev.kind};
+}
+
+function bankrupt(st,why){
+  st.gameOver=true;st.bankrupt=true;st.phase="bankrupt";
+  st.bankruptWhy=why;
+  st.log.push({m:st.month,txt:"💀 BANKRUPT — "+why});
+}
+
+/* ---------- scoring ---------- */
+function finalScore(st){
+  const h=st.history;
+  const last3=h.slice(-3);
+  const avg3=last3.length?Math.round(last3.reduce((x,r)=>x+r.profit,0)/last3.length):0;
+  const inv=Math.round(inventoryValue(st)*0.6);
+  const su=arch(st).startup;
+  let assets=Math.round((su.fixtures+su.pos)*0.4);
+  if(st.displays)assets+=IMPROVEMENTS.displays.cost*0.5;
+  if(st.demo)assets+=IMPROVEMENTS.demo.cost*0.5;
+  if(st.security)assets+=IMPROVEMENTS.security.cost*0.5;
+  if(st.services)assets+=SERVICE_LAUNCH*0.5;
+  assets=Math.round(assets);
+  const debt=totalDebt(st);
+  const raw=st.cash+avg3*10+inv+assets-debt;
+  const val=Math.max(0,Math.round(raw*(1-st.equity)));
+  return{cash:Math.round(st.cash),avg3,profitComponent:avg3*10,inv,assets,
+    bankDebt:Math.round(st.bank.balance),famDebt:Math.round(st.fam.balance),debt,
+    equity:st.equity,raw:Math.round(raw),valuation:val};
+}
+function avgCoherence(st){
+  const h=st.cohHistory;
+  return h.length?h.reduce((x,r)=>x+r.coherence,0)/h.length:st.coherence;
+}
+function badges(st,score){
+  const h=st.history,out=[];
+  const holiday=h.filter(r=>r.m===10||r.m===11).reduce((x,r)=>x+r.revenue,0);
+  const total=h.reduce((x,r)=>x+r.revenue,0)||1;
+  const profMonths=h.filter(r=>r.profit>0).length;
+  const avgInv=h.reduce((x,r)=>x+r.invValue,0)/Math.max(1,h.length);
+  const avgCogs=h.reduce((x,r)=>x+r.cogs,0)/Math.max(1,h.length);
+  const stuckEver=st.cohHistory.some(r=>r.clarity==="stuck");
+  if(!st.bankrupt){
+    if(st.advantage==="lowcost"&&avgCoherence(st)>=80&&score.valuation>=arch(st).goodScore)out.push("🏆 True Cost Leader");
+    if(st.advantage==="premium"&&avgCoherence(st)>=80&&score.valuation>=arch(st).goodScore)out.push("💎 True Differentiator");
+    if(st.scope==="niche"&&st.rep>=72&&st.coherence>=80)out.push("🎯 Niche Master");
+    if(stuckEver)out.push("😵 Stuck in the Middle");
+    if(holiday/total>0.34)out.push("🎄 Holiday Hero");
+    if(profMonths>=8)out.push("📈 Lean and Profitable");
+    if(avgCogs>0&&avgInv>2.6*avgCogs)out.push("📦 Inventory Hoarder");
+    if(st.minCash<1500)out.push("😅 Barely Survived");
+    if(st.bank.borrowed===0&&st.equity===0&&st.fam.balance===0)out.push("🦅 Bootstrapped");
+    if(st.rep>=75)out.push("⭐ Reputation Star");
+    if(!out.length)out.push("🏪 Open for Business");
+  }else if(stuckEver)out.push("😵 Stuck in the Middle");
+  return out.slice(0,3);
+}
+function porterVerdict(st){
+  const declared=porterName(st.advantage,st.scope);
+  const other=st.advantage==="lowcost"?"a differentiator":"a cost leader";
+  const firstStuck=st.cohHistory.find(r=>r.clarity==="stuck");
+  const everWobbled=st.cohHistory.some(r=>r.clarity!=="strong");
+  const worst=st.cohLog.length?st.cohLog.reduce((a,b)=>b.pts>a.pts?b:a):null;
+  if(firstStuck)
+    return"You declared "+declared+" but spent like "+other+" — you got stuck in the middle around "+MONTH_NAMES[firstStuck.m]+
+      (worst?" (biggest drift: "+worst.why+")":"")+". Porter's warning in action: sort-of-cheap, sort-of-premium stores lose both kinds of customers.";
+  if(everWobbled)
+    return"You declared "+declared+" and mostly executed it, though your clarity wobbled"+
+      (worst?" when "+worst.why:"")+". You recovered before customers wrote you off — but the drift had a price.";
+  return"Textbook "+declared+". You declared a strategy and every month's spending matched it — customers always knew exactly what "+st.storeName+" stands for.";
+}
+function strategyNote(st,score){
+  const a=arch(st);const v=score.valuation;
+  const tier=v>=a.greatScore?"Top-tier":v>=a.goodScore?"Strong":v>=25000?"Solid":"Rough";
+  return tier+" result for a "+porterName(st.advantage,st.scope)+" store. (Strategies have different economics — "+
+    (st.advantage==="lowcost"?"cost players grind out thin margins on volume.":"premium players ride fewer, bigger, riskier sales.")+")";
+}
+function debriefQuestions(st){
+  const h=st.history,q=[];
+  /* Porter question — always first */
+  const firstStuck=st.cohHistory.find(r=>r.clarity==="stuck");
+  const worst=st.cohLog.length?st.cohLog.reduce((a,b)=>b.pts>a.pts?b:a):null;
+  if(firstStuck&&worst)
+    q.push("Your clarity meter hit “Stuck in the middle” in "+MONTH_NAMES[firstStuck.m]+" after "+worst.why+". You declared "+porterName(st.advantage,st.scope)+" — which of Porter's strategies were you actually executing, and what would committing have looked like?");
+  else if(st.cohLog.length)
+    q.push("You drifted off-strategy when "+st.cohLog[0].why+" but recovered. What made you drift, and how did the clarity meter change your later decisions?");
+  else
+    q.push("You kept your "+porterName(st.advantage,st.scope)+" strategy coherent all 12 months. Where in your numbers can you see the payoff of that discipline?");
+  const nov=h.find(r=>r.m===10);
+  if(nov&&nov.demand>nov.sold*1.2)
+    q.push("You entered the holiday surge in November with only "+((nov.sold===0)?"no":nov.sold+" units of")+" sellable stock while "+nov.demand+" customers wanted to buy. What would you order differently in September–October?");
+  const hoard=h.find(r=>r.invValue>3*Math.max(1,r.cogs)&&r.invValue>6000);
+  if(hoard)q.push("In "+MONTH_NAMES[hoard.m]+" you held $"+hoard.invValue.toLocaleString()+" of unsold inventory. That cash earned nothing sitting on shelves — what was the opportunity cost?");
+  if(st.minCash<2000&&!st.bankrupt)
+    q.push("Your cash dropped to $"+Math.max(0,Math.round(st.minCash)).toLocaleString()+" at its lowest point. What decision put you there, and what buffer would you keep next time?");
+  if(st.bankrupt)
+    q.push("Look at the three biggest cash drains above. Which one was avoidable, and what early-warning sign did you miss?");
+  if(st.equity>0)q.push("You gave away "+(st.equity*100)+"% equity, which cut your final valuation by that share. Was the investor cash worth it — did it fund growth or just cover losses?");
+  if(st.fam.balance>0)q.push("You still owe family & friends $"+Math.round(st.fam.balance).toLocaleString()+". It was interest-free — but what did the emergency-callback risk actually cost you this year?");
+  if(q.length<4)q.push("If you replayed this exact year, what is the ONE decision you'd change first — and roughly how much was it worth?");
+  return q.slice(0,4);
+}
+function biggestDrains(st){
+  const cats={};
+  for(const l of st.log){
+    const m=l.txt.match(/\(−\$([\d,]+)\)/);
+    if(m){const amt=+m[1].replace(/,/g,"");
+      let cat="Other spending";
+      if(/Ordered|bulk order|product line/i.test(l.txt))cat="Inventory purchases";
+      else if(/Booked/.test(l.txt))cat="Marketing";
+      else if(/Hired|training|Laid off/.test(l.txt))cat="Staffing";
+      else if(/Installed|Launched/.test(l.txt))cat="Improvements & services";
+      cats[cat]=(cats[cat]||0)+amt;}
+  }
+  const rec=st.history.reduce((x,r)=>x+r.opEx,0)+(st.recurring?st.recurring.total:0);
+  cats["Recurring costs (rent, payroll, bills)"]=rec;
+  return Object.entries(cats).sort((a,b)=>b[1]-a[1]).slice(0,3);
+}
+</script>
+
+<script id="ui">
+"use strict";
+/* =====================================================================
+   DELUXE UI LAYER — presentation only. All rules live in the engine.
+   ===================================================================== */
+let G=null, guideShown=false, lastPoint={x:innerWidth/2,y:160};
+const $=s=>document.querySelector(s);
+const $$=s=>Array.from(document.querySelectorAll(s));
+const app=$("#app");
+const fmt=n=>"$"+Math.round(n).toLocaleString();
+const ic=(n,cls)=>`<svg class="ic ${cls||""}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+const esc=s=>String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+document.addEventListener("pointerdown",e=>{lastPoint={x:e.clientX,y:e.clientY};},true);
+addEventListener("beforeunload",e=>{
+  if(G&&!G.gameOver){e.preventDefault();e.returnValue="Your game will be lost if you leave!";}
+});
+
+/* ---------- feedback ---------- */
+function toast(msg,kind){
+  const icon=kind==="err"?"alert":kind==="earn"?"money":kind==="spend"?"wallet":"spark";
+  const t=document.createElement("div");
+  t.className="toast "+(kind||"");
+  t.innerHTML=ic(icon)+"<span>"+esc(msg)+"</span>";
+  $("#toasts").appendChild(t);
+  setTimeout(()=>{t.classList.add("fade");setTimeout(()=>t.remove(),320);},4200);
+}
+function floatMoney(amount,dir){
+  const el=document.createElement("div");
+  el.className="fmoney "+(dir==="in"?"in":"out");
+  el.textContent=(dir==="in"?"+":"−")+fmt(Math.abs(amount));
+  el.style.left=lastPoint.x+"px"; el.style.top=(lastPoint.y-16)+"px";
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),1300);
+}
+function animateNum(el,from,to,dur){
+  if(!el)return;
+  const t0=performance.now();
+  (function tick(now){
+    const p=Math.min(1,(now-t0)/dur), e=1-Math.pow(1-p,3);
+    el.textContent=fmt(from+(to-from)*e);
+    if(p<1)requestAnimationFrame(tick);
+  })(t0);
+}
+
+/* ---------- modals ---------- */
+function openModal(html,cls){
+  closeModal();
+  const s=document.createElement("div");
+  s.className="scrim"; s.id="scrim";
+  s.innerHTML=`<div class="card sheet ${cls||""}">${html}</div>`;
+  document.body.appendChild(s);
+  return s;
+}
+function closeModal(){const m=$("#scrim");if(m)m.remove();}
+function warnIfTight(cost){
+  if(!G)return"";
+  const burn=burnRate(G), left=G.cash-cost;
+  return (left<burn&&left>0)?"This leaves you with "+fmt(left)+" — your monthly costs are "+fmt(burn)+".":"";
+}
+function confirmSpend(label,cost,fn,detail){
+  if(cost<=2000&&!detail){fn();return;}
+  const w=warnIfTight(cost);
+  openModal(`
+    <h2>${ic("help")} Confirm</h2>
+    <p class="small" style="margin:10px 0 0">${label}${cost>0?` for <b style="color:var(--hm)">${fmt(cost)}</b>`:""}?</p>
+    ${detail?`<p class="small" style="margin-top:9px">${detail}</p>`:""}
+    ${w?`<div class="bindwarn" style="margin-top:12px">${ic("alert")}<span>${w}</span></div>`:""}
+    <div class="acts">
+      <button class="btn primary" id="yes">${ic("check")} Yes${cost>0?", spend "+fmt(cost):""}</button>
+      <button class="btn ghost" id="no">Cancel</button>
+    </div>`);
+  $("#yes").onclick=()=>{closeModal();fn();};
+  $("#no").onclick=closeModal;
+}
+/* run an engine action, render feedback */
+function act(fn,kind){
+  const before=G.cash;
+  const r=fn();
+  if(!r.ok){toast(r.msg,"err");return;}
+  const delta=G.cash-before;
+  if(Math.abs(delta)>=1)floatMoney(delta,delta>0?"in":"out");
+  if(r.msg)toast(r.msg,/Off-strategy/.test(r.msg)?"err":(kind==="earn"?"earn":"spend"));
+  if(G.bankrupt){renderBankrupt();return;}
+  renderGame(true);
+}
+
+/* =====================================================================
+   THE GUIDE
+   ===================================================================== */
+function guideHTML(){
+  const T=(t,tip)=>`<span class="tt term" data-tip="${tip}">${t}</span>`;
+  return`<div class="guide">
+    <h3>${ic("target")} 1 · Your goal</h3>
+    <p>Survive 12 monthly turns and finish with the highest ${T("business valuation","Valuation = cash + (average of your last 3 months' profit × 10) + inventory &amp; asset value − all debt (bank + family), then reduced by any equity you gave away.")}.
+    You start with <b>$30,000</b>. If cash ever hits <b>$0 you are bankrupt</b> — game over, no restarts.</p>
+
+    <h3>${ic("grid")} 2 · Porter's Generic Strategies</h3>
+    <p>Michael Porter's insight: there are only a few ways to win, and you must pick one and commit.</p>
+    <ul>
+      <li><b>Cost Leadership</b> — win by having the lowest costs (low-cost operator × broad market).</li>
+      <li><b>Differentiation</b> — win by offering something worth paying more for (premium experience × broad market).</li>
+      <li><b>Cost Focus / Differentiation Focus</b> — do either inside a narrow niche you serve better than anyone.</li>
+    </ul>
+    <div class="ex"><b>⚠ "Stuck in the middle":</b> firms that are sort-of-cheap and sort-of-premium lose <i>both</i> kinds of customers.
+    Your setup choices declare a strategy; your monthly decisions must stay consistent with it. The <b>strategy clarity gauge</b> tracks drift —
+    off-strategy moves (a discount store booking influencers, a premium store running clearance weekends, price flip-flops) push you toward
+    "Stuck in the middle" and a <b>−10% demand penalty</b>, while consistent play builds a growing bonus up to <b>+10%</b>.</div>
+
+    <h3>${ic("cal")} 3 · How a month works</h3>
+    <p><b>①</b> Bills auto-deduct (rent, payroll, utilities, insurance, loan payments — doing nothing still burns cash) →
+    <b>②</b> you decide: restock, market, staff, improve, raise money →
+    <b>③</b> revenue resolves and a random event may hit →
+    <b>④</b> read your P&amp;L and the next-month preview.</p>
+
+    <h3>${ic("chart")} 4 · How demand and revenue work</h3>
+    <p>Demand is a transparent stack of multipliers. The projection panel shows it live as you click, and the results screen replays the
+    <i>same</i> stack with actuals. Worked example:</p>
+    <div class="ex">Base demand 100 units → Seasonality (Nov) <b class="good">+40%</b> → Social ads <b class="good">+12%</b> →
+    Premium pricing <b class="bad">−8%</b> → Reputation <b class="good">+5%</b> → Clarity bonus <b class="good">+6%</b> →
+    <b>Projected demand 148–166 units</b>. You sell the <i>smallest</i> of demand, inventory on hand, and staff capacity —
+    the panel warns you which one is your bottleneck.</div>
+    <p><b>Actual results vary randomly by up to ±10% from projections — plan a cash cushion for bad luck.</b>
+    The random roll is shown on the results screen so projection and outcome always reconcile.</p>
+
+    <h3>${ic("money")} 5 · Money and fundraising</h3>
+    <ul>
+      <li><b>Family &amp; friends</b> — up to $10,000 at 0%, no schedule. Free… until they suddenly need 25% back and you can't pay (reputation hit + forced payment plan).</li>
+      <li><b>Bank loan</b> — up to $15,000 at 8% ${T("APR","Annual percentage rate — the yearly cost of borrowing. 8% APR ≈ 0.67% per month on the remaining balance.")}, equal payments over 12 months. The exact payment is shown before you sign; early payoff allowed.</li>
+      <li><b>Investors</b> — cash for a permanent 15% share of your final score. Know your numbers to pass the pitch.</li>
+      <li><b>Liquidation sale</b> — fast cash by dumping 30% of stock below cost. A loss, but it beats bankruptcy.</li>
+    </ul>
+
+    <h3>${ic("cap")} 6 · Glossary</h3>
+    <p>
+      ${T("burn rate","The recurring cash your business consumes every month (rent, payroll, utilities, insurance, loan payments) before selling anything.")} ·
+      ${T("margin","The % of each sale you keep after paying for the product. Premium ≈ 40%+, low-cost ≈ 15–20%.")} ·
+      ${T("cost of goods sold","COGS — what YOU paid for the items you sold this month. Revenue − COGS = gross profit.")} ·
+      ${T("inventory turnover","How fast stock converts to sales. Unsold stock is cash trapped on a shelf.")} ·
+      ${T("shrinkage","Inventory lost to theft and damage — about 2%/month unless you upgrade security.")} ·
+      ${T("equity","Ownership share. Investor cash is not free — the % you give away multiplies your final score down.")} ·
+      ${T("APR","Annual percentage rate — the yearly cost of borrowing money.")} ·
+      ${T("valuation","What your business is worth at year end: cash + profit trend + assets − debt, × ownership kept.")} ·
+      ${T("attach rate","How often a sale includes extras (cables, warranties, installs). Trained staff raise it — one reason they matter in premium stores.")}
+    </p>
+
+    <h3>${ic("shield")} 7 · Three tips for not going bankrupt</h3>
+    <ul>
+      <li>Keep at least <b>one month of burn rate</b> in cash at all times.</li>
+      <li><b>Stock up before the holiday surge</b> (Nov–Dec), not during it.</li>
+      <li><b>Pick a strategy and commit</b> — the clarity bonus compounds; drifting costs demand.</li>
+    </ul>
+  </div>`;
+}
+function guideFold(){
+  return`<details class="fold"><summary>${ic("caret","caret")}${ic("help")} How to Play — full guide</summary>
+    <div class="card" style="margin-top:4px">${guideHTML()}</div></details>`;
+}
+
+/* =====================================================================
+   SETUP
+   ===================================================================== */
+let pick={advantage:null,scope:null,niche:null,pricing:"match"};
+
+function matrixHTML(){
+  const q=(adv,sc)=>{
+    const on=pick.advantage===adv&&pick.scope===sc;
+    const nm=porterName(adv,sc);
+    const x=adv==="lowcost"
+      ? (sc==="broad"?"Lowest costs, everyone's business":"Lowest costs, one corner of the market")
+      : (sc==="broad"?"Worth paying more for, everyone":"Worth paying more for, one corner");
+    return`<div class="mx-cell ${on?"on":""}"><div class="n">${nm}</div><div class="x">${x}</div></div>`;
+  };
+  return`<div class="matrix">
+    <div class="mx-ch"></div><div class="mx-ch c2">Low-cost operator</div><div class="mx-ch c2">Premium experience</div>
+    <div class="mx-ch mx-rh">Broad market</div>${q("lowcost","broad")}${q("premium","broad")}
+    <div class="mx-ch mx-rh">Focused niche</div>${q("lowcost","niche")}${q("premium","niche")}
+  </div>`;
+}
+function setupSummary(){
+  if(!pick.advantage||!pick.scope||(pick.scope==="niche"&&!pick.niche))
+    return`<div class="summary"><div class="small">Make your choices above to see your strategy and startup costs.</div></div>`;
+  const a=ARCHETYPES[pick.advantage], sc=SCOPE[pick.scope];
+  const units=Math.round(a.startup.initUnits*(pick.scope==="niche"?0.78:1));
+  const dep=Math.round(a.startup.deposit*sc.depositScale/50)*50;
+  const total=a.startup.license+dep+a.startup.fixtures+a.startup.pos+units*a.unitCost;
+  const left=START_CASH-total;
+  return`<div class="summary">
+    <div class="sum-box"><div class="k">Your strategy</div><div class="v">${porterName(pick.advantage,pick.scope)}</div></div>
+    <div class="sum-box"><div class="k">Startup costs</div><div class="v num" style="color:var(--hm)">−${fmt(total)}</div></div>
+    <div class="sum-box"><div class="k">Working capital</div><div class="v num ${left>14000?"good":"warn"}">${fmt(left)}</div></div>
+  </div>
+  <p class="small center" style="margin-top:10px">${porterDesc(pick.advantage,pick.scope)}</p>`;
+}
+function refreshSetup(){
+  const m=$("#matrixHost"); if(m)m.innerHTML=matrixHTML();
+  const s=$("#sumHost"); if(s)s.innerHTML=setupSummary();
+}
+function renderSetup(){
+  G=null; pick={advantage:null,scope:null,niche:null,pricing:"match"};
+  document.body.classList.remove("doom");
+  const advCard=a=>`
+    <div class="card pick rise" data-adv="${a.key}">
+      <div class="pick-head">${ic(a.key==="lowcost"?"box":"cap","ic-lg")}<h3>${a.name}</h3></div>
+      <p class="small" style="margin-bottom:9px">${a.blurb}</p>
+      <div class="spec"><span>Cost per ${a.unitLabel}</span><b class="num">${fmt(a.unitCost)}</b></div>
+      <div class="spec"><span>Typical price</span><b class="num">${fmt(a.basePrice)}</b></div>
+      <div class="spec"><span><span class="tt" data-tip="Margin = (price − cost) ÷ price. The slice of each sale you keep before expenses.">Margin</span></span><b>${a.marginNote}</b></div>
+      <div class="spec"><span>Sales volume</span><b>${a.volumeNote}</b></div>
+      <div class="spec"><span>Overhead (rent, payroll)</span><b>${a.overheadNote}</b></div>
+      <div class="risk">${ic("alert")}<span>${a.riskNote}</span></div>
+    </div>`;
+  app.innerHTML=`
+  <div class="hero">
+    <div class="kicker">${ic("bolt")} Business strategy simulation</div>
+    <h1 class="logo">Circuit Startup</h1>
+    <p class="tag">Open an electronics store with <b>$30,000</b>. Survive 12 months.<br>Build the most valuable business in the class.</p>
+  </div>
+  ${guideFold()}
+  <div class="card">
+    <div class="fields">
+      <div><label>Team name</label><input id="teamName" maxlength="24" placeholder="The Margin Callers"></div>
+      <div><label>Store name</label><input id="storeName" maxlength="24" placeholder="Volt &amp; Bolt"></div>
+    </div>
+  </div>
+
+  <div class="step"><div class="n">1</div><h2>Competitive advantage</h2><div class="hint">How will you win?</div></div>
+  <div class="grid">${advCard(ARCHETYPES.lowcost)}${advCard(ARCHETYPES.premium)}</div>
+
+  <div class="step"><div class="n">2</div><h2>Market scope</h2><div class="hint">Who will you serve?</div></div>
+  <div class="grid">
+    <div class="card pick" data-scope="broad">
+      <div class="pick-head">${ic("globe","ic-lg")}<h3>Broad market</h3></div>
+      <p class="small" style="margin-bottom:9px">Every electronics customer in town.</p>
+      <div class="spec"><span>Demand pool</span><b>Full size</b></div>
+      <div class="spec"><span>Big-box competitor</span><b class="bad">Full exposure</b></div>
+      <div class="spec"><span>Reputation growth</span><b>Normal</b></div>
+      <div class="spec"><span>Rent</span><b>Standard</b></div>
+    </div>
+    <div class="card pick" data-scope="niche">
+      <div class="pick-head">${ic("target","ic-lg")}<h3>Focused niche</h3></div>
+      <p class="small">Own one corner of the market. Pick your niche:</p>
+      <div class="chips">${Object.entries(NICHES).map(([k,n])=>`<div class="chip" data-niche="${k}">${n.icon} ${n.name}</div>`).join("")}</div>
+      <div class="spec"><span>Demand pool</span><b class="warn">−25% smaller</b></div>
+      <div class="spec"><span>Big-box competitor</span><b class="good">Halved (loyalty)</b></div>
+      <div class="spec"><span>Reputation growth</span><b class="good">+50% faster (expertise)</b></div>
+      <div class="spec"><span>Rent</span><b class="good">15% cheaper</b></div>
+    </div>
+  </div>
+
+  <div class="step"><div class="n">3</div><h2>Pricing</h2><div class="hint">An execution lever — free to change,<br>but flip-flopping hurts clarity</div></div>
+  <div class="grid">
+    ${[["undercut","🔻 Undercut competitors","Lower prices, more customers, thinner margins."],
+       ["match","⚖️ Match the market","Balanced price and demand."],
+       ["premium","💎 Premium pricing","Higher margins, fewer customers."]]
+      .map(([k,t,d])=>`<div class="card pick ${k==="match"?"sel":""}" data-price="${k}">
+        <h3 style="margin-bottom:5px">${t}</h3><p class="small">${d}</p></div>`).join("")}
+  </div>
+
+  <div class="card matrix-card">
+    <h3>${ic("grid")} Your position on Porter's matrix</h3>
+    <p class="small">Competitive advantage × market scope = one of four generic strategies. There is deliberately no "middle" option.</p>
+    <div id="matrixHost">${matrixHTML()}</div>
+    <div class="mid-warn">${ic("alert")}<span><b>Stuck in the middle</b> is not a strategy you can pick — it's what happens to you when your monthly
+      spending stops matching the box you chose. Firms caught there lose both the price shoppers and the quality shoppers.</span></div>
+    <div id="sumHost">${setupSummary()}</div>
+  </div>
+
+  <div class="hero-cta"><button class="btn primary big" id="go">${ic("bolt")} Open Your Store</button></div>`;
+
+  $$("[data-adv]").forEach(el=>el.onclick=()=>{
+    $$("[data-adv]").forEach(x=>x.classList.remove("sel"));
+    el.classList.add("sel"); pick.advantage=el.dataset.adv; refreshSetup();});
+  $$("[data-scope]").forEach(el=>el.onclick=e=>{
+    if(e.target.closest(".chip"))return;
+    $$("[data-scope]").forEach(x=>x.classList.remove("sel"));
+    el.classList.add("sel"); pick.scope=el.dataset.scope; refreshSetup();});
+  $$("[data-niche]").forEach(el=>el.onclick=()=>{
+    $$("[data-niche]").forEach(x=>x.classList.remove("sel"));
+    el.classList.add("sel"); pick.niche=el.dataset.niche; pick.scope="niche";
+    $$("[data-scope]").forEach(x=>x.classList.remove("sel"));
+    $('[data-scope="niche"]').classList.add("sel"); refreshSetup();});
+  $$("[data-price]").forEach(el=>el.onclick=()=>{
+    $$("[data-price]").forEach(x=>x.classList.remove("sel"));
+    el.classList.add("sel"); pick.pricing=el.dataset.price;});
+  $("#go").onclick=startGame;
+}
+function startGame(){
+  const t=$("#teamName").value.trim(), s=$("#storeName").value.trim();
+  if(!t||!s)return toast("Enter a team name and a store name first.","err");
+  if(!pick.advantage)return toast("Pick your competitive advantage first.","err");
+  if(!pick.scope)return toast("Pick your market scope first.","err");
+  if(pick.scope==="niche"&&!pick.niche)return toast("Pick which niche you'll focus on.","err");
+  G=createGame(t,s,pick.advantage,pick.scope,pick.niche,pick.pricing);
+  const b=G.startupBill;
+  openModal(`
+    <h2>${ic("wallet")} Startup purchases</h2>
+    <p class="small">These deduct immediately — in business, everything costs money.</p>
+    <table class="ledger">
+      ${b.items.map(i=>`<tr><td>${i[0]}</td><td style="color:var(--no)">−${fmt(i[1])}</td></tr>`).join("")}
+      <tr class="tot"><td>Total</td><td style="color:var(--no)">−${fmt(b.total)}</td></tr>
+      <tr class="tot"><td>Working capital remaining</td><td class="${G.cash>14000?"good":"warn"}">${fmt(G.cash)}</td></tr>
+    </table>
+    <div class="evt mixed"><b>${ic("grid")} Declared strategy: ${porterName(G.advantage,G.scope)}</b>
+      <p class="small" style="margin-top:5px">${porterDesc(G.advantage,G.scope)} Keep every monthly decision consistent with it — the clarity gauge is watching.</p></div>
+    <div class="acts"><button class="btn primary" id="begin">Continue ${ic("caret")}</button></div>`);
+  $("#begin").onclick=()=>{
+    closeModal();
+    if(!guideShown){
+      guideShown=true;
+      openModal(`<h2>${ic("help")} How to Play</h2>${guideHTML()}
+        <div class="acts"><button class="btn primary" id="gok">Got it — start January ${ic("caret")}</button></div>`);
+      $("#gok").onclick=()=>{closeModal();beginMonth();};
+    } else beginMonth();
+  };
+}
+function beginMonth(){
+  startMonth(G);
+  if(G.bankrupt)return renderBankrupt();
+  showBills();
+}
+
+/* =====================================================================
+   GAME SCREEN
+   ===================================================================== */
+function gauge(pct,color,label){
+  const R=25, C=2*Math.PI*R, off=C*(1-Math.max(0,Math.min(100,pct))/100);
+  return`<div class="gauge-wrap"><svg viewBox="0 0 60 60" width="60" height="60">
+    <circle class="gauge-bg" cx="30" cy="30" r="${R}" fill="none" stroke-width="7"/>
+    <circle class="gauge-fg" cx="30" cy="30" r="${R}" fill="none" stroke="${color}" stroke-width="7"
+      stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"
+      style="--full:${C.toFixed(1)}" transform="rotate(-90 30 30)"/>
+  </svg><div class="gv">${label}</div></div>`;
+}
+function timelineHTML(){
+  const cls=m=>(m===10||m===11)?"peak":(m===7||m===8)?"bump":(m===0||m===1)?"slump":"";
+  const seas=m=>(m===10||m===11)?"holiday":(m===7||m===8)?"school":(m===0||m===1)?"slump":"";
+  return`<div class="timeline">${MONTH_NAMES.map((n,m)=>{
+    const done=G.history.find(h=>h.m===m);
+    const now=m===G.month&&!G.gameOver;
+    const dot=done?`<span class="dot" style="background:${done.profit>=0?"#2F7D32":"#B3261E"}"></span>`:"";
+    return`<div class="tl ${cls(m)} ${now?"now":""} ${done?"done":""}" title="${n}">
+      ${dot}<div class="m">${n.slice(0,3)}</div><span class="s">${seas(m)||"&nbsp;"}</span></div>`;}).join("")}</div>`;
+}
+function hudHTML(){
+  const a=arch(G), burn=burnRate(G);
+  const cls=G.cash>15000?"cash-good":G.cash>=5000?"cash-warn":"cash-bad";
+  return`<div class="hud">
+    <div class="hud-brand">
+      <div class="hud-mark">${ic(G.advantage==="lowcost"?"box":"cap","ic-lg")}</div>
+      <div style="min-width:0">
+        <div class="hud-name">${esc(G.storeName)}</div>
+        <div class="hud-sub">${esc(G.teamName)} · ${porterName(G.advantage,G.scope)}${G.nicheType?" · "+NICHES[G.nicheType].name:""}</div>
+      </div>
+    </div>
+    <div class="hud-spacer"></div>
+    <div class="hud-stat sm hide-sm"><span class="k">Month</span><span class="v">${G.month+1}<span style="color:var(--t3);font-size:.8rem">/12</span></span></div>
+    <div class="hud-stat sm hide-sm"><span class="k">Burn</span><span class="v num">${fmt(burn)}</span></div>
+    <div class="hud-stat"><span class="k">Cash</span><span class="v num ${cls}" id="hudCash">${fmt(G.cash)}</span></div>
+    <button class="btn ghost" id="newGame">${ic("gear")} New</button>
+  </div>`;
+}
+function stackRowsHTML(stk,extra){
+  const rows=stk.items.map(it=>{
+    if(it.kind==="base")
+      return`<div class="srow base"><span class="lab">${it.label}</span><span class="bar" style="visibility:hidden"></span>
+        <span class="val">${it.value}</span></div>`;
+    const p=it.pct, w=Math.min(50,Math.abs(p)*0.9);
+    const bar=p>0?`<i class="p" style="width:${w}%"></i>`:p<0?`<i class="n" style="width:${w}%"></i>`:"";
+    return`<div class="srow"><span class="lab">${it.label}</span>
+      <span class="bar">${bar}</span>
+      <span class="val ${p>0?"p":p<0?"n":"z"}">${p>0?"+":""}${p}%</span></div>`;
+  }).join("");
+  return`<div class="stack">${rows}${extra||""}</div>`;
+}
+function projectionHTML(){
+  const pr=projectRevenue(G), stk=pr.stack, a=arch(G);
+  const sellable=Math.min(G.units,pr.cap);
+  const extra=`
+    <div class="srow res"><span class="lab">Projected demand <span class="tiny">(±10% luck)</span></span>
+      <span class="val">${stk.low}–${stk.high} ${a.unitLabel}s</span></div>
+    <div class="srow res"><span class="lab">You can serve at most</span>
+      <span class="val">${sellable} <span class="tiny">(stock ${G.units} · staff ${pr.cap})</span></span></div>
+    <div class="srow res"><span class="lab">Projected revenue @ ${fmt(pr.price)}${G.services?" + services":""}</span>
+      <span class="val" style="color:var(--ok)">${fmt(pr.revLow)}–${fmt(pr.revHigh)}</span></div>`;
+  let warn="";
+  const W=t=>`<div class="bindwarn">${ic("alert")}<span>${t}</span></div>`;
+  if(pr.binding==="inventory")warn=W(`<b>Inventory is your bottleneck.</b> Even a slow month brings ${stk.low} customers but you only have ${G.units} in stock. Order more or watch them walk out.`);
+  else if(pr.binding==="staff")warn=W(`<b>Staff capacity is your bottleneck.</b> You can serve ${pr.cap} sales but ${stk.low}+ customers are coming. Hire or train.`);
+  else if(pr.binding==="inventory-high")warn=W(`A lucky month (${stk.high} customers) would outrun your ${G.units} in stock — your upside is capped by inventory.`);
+  else if(pr.binding==="staff-high")warn=W(`A lucky month (${stk.high} customers) would outrun staff capacity (${pr.cap}) — your upside is capped.`);
+  return`<div class="card proj">
+    <h3>${ic("eye")} ${MONTH_NAMES[G.month]} projection <span class="pill">live — updates with every choice</span></h3>
+    ${stackRowsHTML(stk,extra)}
+    ${warn}
+    <div class="disclaim">${ic("spark")} Actual results vary randomly by up to ±10% from projections — plan a cash cushion for bad luck.</div>
+  </div>`;
+}
+
+/* ---------- cash chart ---------- */
+function chartData(){
+  const pts=[{m:-1,v:START_CASH}].concat(G.history.map(h=>({m:h.m,v:h.cashEnd})));
+  if(!G.gameOver)pts.push({m:G.month,v:Math.round(G.cash)});
+  return pts;
+}
+function chartHTML(animate){
+  const pts=chartData();
+  const W=1000,H=172,L=52,R=54,T=16,B=26;
+  const vals=pts.map(p=>p.v);
+  const lo=Math.min(0,...vals), hi=Math.max(START_CASH*1.1,...vals);
+  const X=i=>L+(W-L-R)*(pts.length<2?0:i/(pts.length-1));
+  const Y=v=>T+(H-T-B)*(1-(v-lo)/((hi-lo)||1));
+  const line=pts.map((p,i)=>(i?"L":"M")+X(i).toFixed(1)+" "+Y(p.v).toFixed(1)).join(" ");
+  const area=line+` L ${X(pts.length-1).toFixed(1)} ${Y(lo).toFixed(1)} L ${X(0).toFixed(1)} ${Y(lo).toFixed(1)} Z`;
+  const ticks=[lo,(lo+hi)/2,hi].map(v=>Math.round(v/1000)*1000).filter((v,i,arr)=>arr.indexOf(v)===i);
+  const grid=ticks.map(v=>`<line class="grid-l" x1="${L}" x2="${W-R}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}"/>
+    <text class="axis-t" x="${L-9}" y="${(Y(v)+3.5).toFixed(1)}" text-anchor="end">$${Math.round(v/1000)}k</text>`).join("");
+  const xlab=pts.map((p,i)=>i%2===0||i===pts.length-1
+    ?`<text class="axis-t" x="${X(i).toFixed(1)}" y="${H-6}" text-anchor="middle">${p.m<0?"Start":MONTH_NAMES[p.m].slice(0,3)}</text>`:"").join("");
+  const dots=pts.map((p,i)=>`<circle class="cdot" data-i="${i}" cx="${X(i).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="4"/>`).join("");
+  const last=pts[pts.length-1];
+  const lab=`<text class="clabel" x="${(X(pts.length-1)+9).toFixed(1)}" y="${(Y(last.v)+4).toFixed(1)}">${fmt(last.v)}</text>`;
+  const len=Math.round((W-L-R)*1.35+400);
+  return`<div class="card chart-card">
+    <div class="chart-head"><h3 style="margin:0">${ic("chart")} Cash over time</h3>
+      <span class="tiny">Hover any point for the exact balance</span></div>
+    <div class="chart-host" id="chartHost">
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Cash balance by month">
+        <defs><linearGradient id="cfill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--chart)" stop-opacity=".38"/>
+          <stop offset="100%" stop-color="var(--chart)" stop-opacity="0"/></linearGradient></defs>
+        ${grid}${xlab}
+        <path d="${area}" fill="url(#cfill)"/>
+        <path class="cline ${animate?"anim":""}" style="--len:${len}" d="${line}"/>
+        <line class="crosshair hidden" id="xhair" y1="${T}" y2="${H-B}"/>
+        ${dots}${lab}
+      </svg>
+      <div class="ctip" id="ctip"></div>
+    </div>
+  </div>`;
+}
+function wireChart(){
+  const host=$("#chartHost"); if(!host)return;
+  const svg=host.querySelector("svg"), tip=$("#ctip"), hair=$("#xhair");
+  const pts=chartData(), dots=Array.from(host.querySelectorAll(".cdot"));
+  host.addEventListener("mousemove",e=>{
+    const r=host.getBoundingClientRect();
+    let best=0,bd=1e9;
+    dots.forEach((d,i)=>{
+      const cx=(+d.getAttribute("cx"))/1000*r.width;
+      const dist=Math.abs(cx-(e.clientX-r.left));
+      if(dist<bd){bd=dist;best=i;}
+    });
+    dots.forEach(d=>d.setAttribute("r","4"));
+    const d=dots[best]; d.setAttribute("r","6.5");
+    const cx=(+d.getAttribute("cx"))/1000*r.width, cy=(+d.getAttribute("cy"))/172*r.height;
+    hair.classList.remove("hidden");
+    hair.setAttribute("x1",d.getAttribute("cx")); hair.setAttribute("x2",d.getAttribute("cx"));
+    tip.style.opacity="1"; tip.style.left=cx+"px"; tip.style.top=cy+"px";
+    tip.innerHTML=`${pts[best].m<0?"Opening":MONTH_NAMES[pts[best].m]} · <span class="cv">${fmt(pts[best].v)}</span>`;
+  });
+  host.addEventListener("mouseleave",()=>{
+    tip.style.opacity="0"; hair.classList.add("hidden");
+    dots.forEach(d=>d.setAttribute("r","4"));
+  });
+}
+
+/* ---------- decision cards ---------- */
+function decisionsHTML(){
+  const a=arch(G), uc=effUnitCost(G), mk=G.marketing;
+  const offInf=isOffStrategy(G,"influencer"), offSale=isOffStrategy(G,"sale"), offDemo=isOffStrategy(G,"demo");
+  const OFF=t=>`<span class="flag-off">${ic("alert")} off-strategy (${t})</span>`;
+  const stk=demandStack(G,null);
+  const sug=Math.max(0,stk.high-G.units);
+
+  const inventory=`<div class="card rise" style="animation-delay:.02s">
+    <h3>${ic("box")} Inventory <span class="pill">${G.units} in stock</span></h3>
+    <div class="row"><div class="d">Restock at <b class="num">${fmt(uc)}</b>/${a.unitLabel}${G.costHike?' <span class="warn">(supplier hike!)</span>':""} ·
+      sells for <b class="num">${fmt(price(G))}</b><div class="tiny">Suggested: ${sug} to cover a lucky month</div></div>
+      <div class="qty"><input type="number" id="qty" min="0" step="${G.advantage==="lowcost"?10:1}" value="${sug}">
+      <button class="btn" id="order">${ic("box")} Order</button></div></div>
+    <div class="row"><div class="d">Diversify: <b>${G.cats<2?catNames(G)[G.cats]:"—"}</b> — permanent <b class="good">+10% base demand</b></div>
+      ${G.cats>=2?`<span class="chip-on">${ic("check")} Both added</span>`
+        :`<button class="btn" id="cat">Add<span class="cost">${fmt(CAT_COST)}</span></button>`}</div>
+    <div class="row"><div class="d"><span class="tt" data-tip="Sell 30% of your stock at 70% of what you paid — a loss per unit, but it turns shelf-stock into cash immediately.">Parking-lot liquidation</span>
+      — fast cash below cost, −1 rep ${G.advantage==="premium"?OFF("−5 clarity"):""}</div>
+      <button class="btn" id="liq" ${G.units<4||G.liquidatedThisMonth?"disabled":""}>Liquidate 30%</button></div>
+  </div>`;
+
+  const marketing=`<div class="card rise" style="animation-delay:.06s">
+    <h3>${ic("mega")} Marketing <span class="pill">${mk==="none"?"none booked":MARKETING[mk].name}</span></h3>
+    ${["social","local","influencer","sale"].map(id=>{
+      const m=MARKETING[id], eff=Math.round(a.mkt[id]*100);
+      const off=(id==="influencer"&&offInf)||(id==="sale"&&offSale);
+      return`<div class="row"><div class="d"><b>${m.name}</b> — <b class="good">+${eff}% demand</b> this month
+        <div class="tiny">${m.desc}</div>${off?OFF(id==="sale"?"−12 clarity, −3 rep":"−12 clarity"):""}</div>
+        <button class="btn" data-mkt="${id}" ${mk!=="none"?"disabled":""}>Book<span class="cost">${fmt(m.cost)}</span></button></div>`;
+    }).join("")}
+  </div>`;
+
+  const staffing=`<div class="card rise" style="animation-delay:.10s">
+    <h3>${ic("users")} Staffing <span class="pill">${G.staff} staff · ${G.trained} trained</span></h3>
+    <div class="row"><div class="d">Capacity <b>${Math.round(staffCapacity(G))}</b> sales/mo · salary ${fmt(a.staffCost)}/mo (trained ${fmt(a.trainedCost)})</div></div>
+    <div class="row"><div class="d">Hire employee<div class="tiny">+${a.staffCap} capacity · +${fmt(a.staffCost)}/mo burn</div></div>
+      <button class="btn" id="hire">Hire<span class="cost">${fmt(HIRE_FEE)}</span></button></div>
+    <div class="row"><div class="d">Train employee<div class="tiny">+capacity, +reputation${G.advantage==="premium"?" — critical for premium":""}${G.scope==="niche"?" · niche expertise ×1.5":""}</div></div>
+      <button class="btn" id="train" ${G.trained>=G.staff?"disabled":""}>Train<span class="cost">${fmt(TRAIN_COST)}</span></button></div>
+    <div class="row"><div class="d">Lay off<div class="tiny">severance, −1 reputation</div></div>
+      <button class="btn danger" id="fire" ${G.staff<=1?"disabled":""}>Lay off<span class="cost">${fmt(SEVERANCE)}</span></button></div>
+  </div>`;
+
+  const store=`<div class="card rise" style="animation-delay:.14s">
+    <h3>${ic("store")} Store &amp; services</h3>
+    ${Object.entries(IMPROVEMENTS).map(([id,im])=>`
+      <div class="row"><div class="d"><b>${im.name}</b><div class="tiny">${im.desc}</div>${id==="demo"&&offDemo?OFF("−10 clarity"):""}</div>
+      ${G[id]?`<span class="chip-on">${ic("check")} Installed</span>`
+        :`<button class="btn" data-imp="${id}">Buy<span class="cost">${fmt(im.cost)}</span></button>`}</div>`).join("")}
+    <div class="row"><div class="d"><b>${serviceName(G)}</b><div class="tiny">Recurring high-margin revenue that grows every month</div></div>
+      ${G.services?`<span class="chip-on">${ic("check")} ~${fmt(projectedServiceRev(G))}/mo</span>`
+        :`<button class="btn" id="svc">Launch<span class="cost">${fmt(SERVICE_LAUNCH)}</span></button>`}</div>
+    <div class="row"><div class="d"><b>Insurance</b><div class="tiny">${fmt(INSURANCE_COST)}/mo — covers most theft &amp; recall losses</div></div>
+      <button class="btn" id="ins">${G.insurance?"Cancel":"Buy"}</button></div>
+  </div>`;
+
+  const money=`<div class="card rise" style="animation-delay:.18s">
+    <h3>${ic("money")} Fundraising</h3>
+    <div class="row"><div class="d"><b>Family &amp; friends</b> — 0% interest, no schedule, up to ${fmt(FAM_MAX)}
+      <div class="tiny">Risk: while you owe them, a family emergency can demand 25% back on the spot.</div>
+      <div class="tiny">Currently owed: <b>${fmt(G.fam.balance)}</b></div></div>
+      <div class="btn-col"><button class="btn" id="fam" ${G.fam.balance+FAM_STEP>FAM_MAX?"disabled":""}>Borrow $2,500</button>
+      ${G.fam.balance>0?`<button class="btn ghost" id="famPay">Repay ${fmt(Math.min(FAM_STEP,G.fam.balance))}</button>`:""}</div></div>
+    <div class="row"><div class="d"><b>Bank loan</b> — 8% APR, 12 equal payments, up to ${fmt(LOAN_MAX)}
+      <div class="tiny">Borrowed ${fmt(G.bank.borrowed)}${G.bank.balance>0?` · balance <b>${fmt(G.bank.balance)}</b> at <b>${fmt(G.bank.payment)}/mo</b>`:""}</div></div>
+      <div class="btn-col"><button class="btn" id="loan" ${G.bank.borrowed>=LOAN_MAX?"disabled":""}>Borrow $5,000</button>
+      ${G.bank.balance>0?`<button class="btn ghost" id="payoff">Pay off ${fmt(G.bank.balance)}</button>`:""}</div></div>
+    <div class="row"><div class="d"><b>Investor pitch</b> — 3 questions about YOUR numbers
+      <div class="tiny">Success: +${fmt(INVESTOR_CASH)} for ${INVESTOR_EQUITY*100}% <span class="tt" data-tip="Equity = ownership. Every % you give away multiplies your final valuation down. 15% equity means final score × 0.85.">equity</span></div></div>
+      <button class="btn" id="pitch" ${G.investorRounds>=2||G.month-G.investorLastFail<2||G.month<1?"disabled":""}>Pitch</button></div>
+    <div class="row"><div class="d"><b>Crowdfunding</b> — one-time campaign<div class="tiny">Payout depends on reputation + luck, arrives next month</div></div>
+      <button class="btn" id="crowd" ${G.crowdUsed?"disabled":""}>${G.crowdUsed?"Used":"Launch"}${G.crowdUsed?"":`<span class="cost">${fmt(CROWD_COST)}</span>`}</button></div>
+  </div>`;
+
+  const pricing=`<div class="card rise" style="animation-delay:.22s">
+    <h3>${ic("tag")} Pricing <span class="pill">${G.pricing}</span></h3>
+    ${["undercut","match","premium"].map(p=>{
+      const pm=a.priceMults[p];
+      const off=(p==="premium"&&G.advantage==="lowcost")||(p==="undercut"&&G.advantage==="premium");
+      const nm=p==="undercut"?"🔻 Undercut":p==="match"?"⚖️ Match market":"💎 Premium";
+      return`<div class="row"><div class="d"><b>${nm}</b>
+        <div class="tiny">price ×${pm.p} · demand ${pm.d>1?"+":""}${Math.round((pm.d-1)*100)}%</div>
+        ${off?OFF(p==="undercut"&&G.advantage==="premium"?"clarity drain each month, −4 rep to switch":"clarity drain each month"):""}</div>
+      <button class="btn" data-price="${p}" ${G.pricing===p?"disabled":""}>${G.pricing===p?"Active":"Switch"}</button></div>`;
+    }).join("")}
+    ${G.bulkOffer?`<div class="evt mixed" style="margin-bottom:0"><b>${ic("spark")} Corporate bulk order on the table</b>
+      <p class="small" style="margin:5px 0 9px">Buy ${G.bulkOffer.units} units (~${fmt(G.bulkOffer.units*uc)}) and they pay
+      <b class="good">${fmt(G.bulkOffer.payout)}</b> at the start of next month.</p>
+      <div style="display:flex;gap:8px"><button class="btn primary" id="bulkY">Accept</button>
+      <button class="btn ghost" id="bulkN">Decline</button></div></div>`:""}
+  </div>`;
+
+  return`<div class="grid">${inventory}${marketing}${staffing}${store}${money}${pricing}</div>`;
+}
+
+function renderGame(keepScroll){
+  if(!G)return;
+  const y=keepScroll?scrollY:0;
+  const a=arch(G), burn=burnRate(G);
+  const clar=clarityOf(G.coherence);
+  const clarColor=clar==="strong"?"#7BE495":clar==="wobble"?"#FFC46B":"#FF97AA";
+  const repColor=G.rep>=70?"#7BE495":G.rep>=40?"#FFC46B":"#FF97AA";
+  const cashCls=G.cash>15000?"good":G.cash>=5000?"warn":"bad";
+  app.innerHTML=`
+  ${hudHTML()}
+  <div class="small" style="margin:0 0 10px;display:flex;align-items:center;gap:8px;color:var(--hm);font-weight:600">
+    ${ic("cal")} ${seasonLabel(G.month)}</div>
+  ${timelineHTML()}
+  <div class="tiles">
+    <div class="card tile"><div class="k">${ic("wallet")} Cash</div>
+      <div class="v num ${cashCls}">${fmt(G.cash)}</div>
+      <div class="sub">${cashCls==="good"?"Healthy runway":cashCls==="warn"?"Watch the burn":"Danger zone"}</div></div>
+    <div class="card tile"><div class="k">${ic("chart")} <span class="tt" data-tip="Recurring monthly costs: rent, payroll, utilities, security, insurance, loan and family-plan payments. Deducted automatically every month.">Burn rate</span></div>
+      <div class="v num">${fmt(burn)}</div>
+      <div class="sub">${(G.cash/Math.max(1,burn)).toFixed(1)} months of runway</div></div>
+    <div class="card tile"><div class="k">${ic("box")} Inventory</div>
+      <div class="v num">${G.units}</div>
+      <div class="sub">${fmt(inventoryValue(G))} tied up in stock</div></div>
+    <div class="card tile"><div class="k">${ic("spark")} Reputation</div>
+      <div class="tile-gauge">${gauge(G.rep,repColor,Math.round(G.rep))}
+        <div class="sub" style="margin:0">${G.rep>=70?"Customers love you":G.rep>=40?"Solid standing":"Reputation is hurting"}</div></div></div>
+    <div class="card tile"><div class="k">${ic("grid")} <span class="tt" data-tip="How clearly customers see your declared strategy. Off-strategy spending drains it; consistent months rebuild it (+5/mo). Strong = growing demand bonus up to +10%. Stuck in the middle = −10% demand.">Strategy clarity</span></div>
+      <div class="tile-gauge">${gauge(G.coherence,clarColor,Math.round(G.coherence))}
+        <div style="margin:0"><div style="font-weight:800;font-size:.86rem;color:${clarColor}">${clarityLabel(G.coherence)}</div>
+        <div class="sub">${clar==="strong"?"+"+G.cohBonus+"% demand bonus":clar==="stuck"?"−10% demand penalty":"no bonus — recommit"}</div></div></div></div>
+    <div class="card tile"><div class="k">${ic("money")} Debt</div>
+      <div class="v num">${fmt(totalDebt(G))}</div>
+      <div class="sub">bank ${fmt(G.bank.balance)} · family ${fmt(G.fam.balance)}<br>${(G.equity*100).toFixed(0)}% equity given away</div></div>
+  </div>
+  ${projectionHTML()}
+  ${chartHTML(false)}
+  ${guideFold()}
+  ${decisionsHTML()}
+  <div class="hero-cta">
+    <button class="btn primary big" id="resolve">${ic("store")} Open the Doors — resolve ${MONTH_NAMES[G.month]}</button>
+    <p class="tiny" style="margin-top:9px">Revenue comes in, then a random event may hit.</p>
+  </div>`;
+  wireGame(); wireChart();
+  scrollTo(0,y);
+}
+function wireGame(){
+  $("#newGame").onclick=()=>{
+    openModal(`<h2>${ic("alert")} Start a new game?</h2>
+      <p class="small" style="margin-top:8px">This fully resets everything — the current run is gone for good.</p>
+      <div class="acts"><button class="btn danger" id="y">Yes, reset</button><button class="btn ghost" id="n">Keep playing</button></div>`);
+    $("#y").onclick=()=>{closeModal();renderSetup();};
+    $("#n").onclick=closeModal;
+  };
+  $("#order").onclick=()=>{
+    const q=Math.max(0,Math.round(+$("#qty").value||0));
+    if(!q)return toast("Enter a quantity first.","err");
+    const cost=q*effUnitCost(G), w=warnIfTight(cost);
+    if(w)toast(w,"err");
+    confirmSpend(`Order ${q} ${arch(G).unitLabel}s`,cost,()=>act(()=>orderInventory(G,q)));
+  };
+  const on=(sel,fn)=>{const el=$(sel); if(el)el.onclick=fn;};
+  on("#cat",()=>act(()=>addCategory(G)));
+  on("#liq",()=>act(()=>liquidate(G),"earn"));
+  $$("[data-mkt]").forEach(b=>b.onclick=()=>{
+    const id=b.dataset.mkt, w=warnIfTight(MARKETING[id].cost);
+    if(w)toast(w,"err");
+    act(()=>setMarketing(G,id));});
+  on("#hire",()=>act(()=>hireStaff(G)));
+  on("#train",()=>act(()=>trainStaff(G)));
+  on("#fire",()=>act(()=>layoffStaff(G)));
+  $$("[data-imp]").forEach(b=>b.onclick=()=>{
+    const id=b.dataset.imp;
+    confirmSpend("Install "+IMPROVEMENTS[id].name,IMPROVEMENTS[id].cost,()=>act(()=>buyImprovement(G,id)));});
+  on("#svc",()=>act(()=>launchServices(G)));
+  on("#ins",()=>act(()=>setInsurance(G,!G.insurance)));
+  on("#fam",()=>act(()=>borrowFamily(G),"earn"));
+  on("#famPay",()=>act(()=>repayFamily(G,false)));
+  on("#loan",()=>{
+    const pmt=loanMonthlyFor(G.bank.balance+LOAN_STEP);
+    confirmSpend("Borrow $5,000 from the bank",0,()=>act(()=>takeLoan(G),"earn"),
+      `8% APR repaid over 12 months in equal payments. Your monthly payment becomes <b>${fmt(pmt)}</b>
+       (balance ${fmt(G.bank.balance+LOAN_STEP)}). Any balance left at game end subtracts from your valuation. Early payoff is allowed.`);
+  });
+  on("#payoff",()=>confirmSpend("Pay off the bank loan",Math.round(G.bank.balance),()=>act(()=>payOffLoan(G))));
+  on("#crowd",()=>act(()=>runCrowdfunding(G)));
+  on("#pitch",showPitch);
+  $$("[data-price]").forEach(b=>b.onclick=()=>act(()=>setPricing(G,b.dataset.price)));
+  on("#bulkY",()=>confirmSpend(`Buy ${G.bulkOffer.units} units for the corporate order`,
+    G.bulkOffer.units*effUnitCost(G),()=>act(()=>acceptBulkOrder(G),"earn")));
+  on("#bulkN",()=>act(()=>declineBulkOrder(G)));
+  $("#resolve").onclick=()=>{
+    const r=endMonth(G);
+    if(G.bankrupt)return renderBankrupt(r);
+    showResults(r);
+  };
+}
+
+/* =====================================================================
+   MODALS: bills, pitch, results
+   ===================================================================== */
+function showBills(){
+  const rec=G.recurring, extra=[];
+  if(G.crowdCollected)extra.push(`<tr><td>${ic("spark")} Crowdfunding payout</td><td class="good">+${fmt(G.crowdCollected)}</td></tr>`);
+  if(G.bulkPaid)extra.push(`<tr><td>${ic("spark")} Corporate bulk order paid</td><td class="good">+${fmt(G.bulkPaid)}</td></tr>`);
+  openModal(`
+    <h2>${ic("cal")} ${MONTH_NAMES[G.month]} — bills are due</h2>
+    <p class="small">Recurring costs deduct before you make a single decision. Doing nothing still burns cash.</p>
+    <table class="ledger">
+      ${rec.lines.map(l=>`<tr><td>${l[0]}</td><td style="color:var(--no)">−${fmt(l[1])}</td></tr>`).join("")}
+      ${extra.join("")}
+      <tr class="tot"><td>Cash after bills</td><td class="${G.cash>burnRate(G)?"good":"bad"}">${fmt(G.cash)}</td></tr>
+    </table>
+    ${G.famEmergency?`<div class="evt ${G.famEmergency.paid?"mixed":"bad"}">
+      <b>${ic("alert")} Family emergency${G.famEmergency.paid?" — paid":" — couldn't pay!"}</b>
+      <p class="small" style="margin-top:5px">${G.famEmergency.txt}</p></div>`:""}
+    <div class="acts"><button class="btn primary" id="ok">Plan the month ${ic("caret")}</button></div>`);
+  $("#ok").onclick=()=>{closeModal();renderGame();};
+}
+function showPitch(){
+  const qs=investorQuestions(G);
+  openModal(`
+    <h2>${ic("users")} Investor pitch</h2>
+    <p class="small">Answer at least 2 of 3 correctly about your own business. Success: +${fmt(INVESTOR_CASH)} for ${INVESTOR_EQUITY*100}% equity.</p>
+    ${qs.map((q,i)=>`<div class="qa"><div class="q">${i+1}. ${q.q}</div>
+      ${q.opts.map(o=>`<label class="opt"><input type="radio" name="q${i}" value="${o.correct?1:0}"><span>${o.label}</span></label>`).join("")}
+    </div>`).join("")}
+    <div class="acts"><button class="btn primary" id="go">Make the pitch</button><button class="btn ghost" id="no">Back out</button></div>`);
+  $("#no").onclick=closeModal;
+  $("#go").onclick=()=>{
+    let c=0;
+    for(let i=0;i<3;i++){const s=document.querySelector(`input[name=q${i}]:checked`); if(s&&s.value==="1")c++;}
+    closeModal();
+    const r=pitchInvestor(G,c);
+    if(!r.ok)return toast(r.msg,"err");
+    if(r.success)floatMoney(INVESTOR_CASH,"in");
+    toast(r.msg,r.success?"earn":"err");
+    renderGame();
+  };
+}
+function showResults(r){
+  const a=arch(G);
+  const capped=r.sold<r.demand;
+  const why=r.sold===r.cap&&r.cap<r.demand?"staff capacity":"inventory on hand";
+  const net=r.profit;
+  const extra=`
+    <div class="srow res"><span class="lab">Customers who wanted to buy</span><span class="val">${r.demand}</span></div>
+    <div class="srow res"><span class="lab">You sold at ${fmt(r.price)}${r.wasDiscounted?' <span class="tiny warn">(old-model discount)</span>':""}</span>
+      <span class="val" style="color:${capped?"var(--no)":"var(--ok)"}">${r.sold}${capped?` <span class="tiny">— capped by ${why}</span>`:""}</span></div>`;
+  const peek=nextMonthPreview(G,r);
+  openModal(`
+    <h2>${ic("chart")} ${MONTH_NAMES[r.month]} results</h2>
+    <p class="small">The same stack you saw in the projection — now with the actual dice roll included.</p>
+    ${stackRowsHTML(r.stack,extra)}
+    ${r.event?`<div class="evt ${r.event.kind}"><b>${r.event.title}</b>
+      <p class="small" style="margin-top:5px">${r.event.desc}</p></div>`:""}
+    <table class="ledger">
+      <tr><td>Revenue (${r.sold} × ${fmt(r.price)})</td><td class="good">+${fmt(r.revenue)}</td></tr>
+      ${r.returns?`<tr><td>Returns &amp; defects</td><td class="bad">−${fmt(r.returns)}</td></tr>`:""}
+      ${r.serviceRev?`<tr><td>${serviceName(G)}</td><td class="good">+${fmt(r.serviceRev)}</td></tr>`:""}
+      <tr><td><span class="tt" data-tip="Cost of goods sold — what you originally paid for the units you sold this month.">COGS</span></td><td class="bad">−${fmt(r.cogs)}</td></tr>
+      <tr><td>Operating costs (bills + spending)</td><td class="bad">−${fmt(r.opEx)}</td></tr>
+      ${r.shrinkCost?`<tr><td><span class="tt" data-tip="Stock lost to theft or damage this month. A security upgrade cuts this from 2% to 0.5%.">Shrinkage</span> (${r.shrunk} units)</td><td class="bad">−${fmt(r.shrinkCost)}</td></tr>`:""}
+      <tr class="tot"><td>Net profit</td><td class="${net>=0?"good":"bad"}">${net>=0?"+":"−"}${fmt(Math.abs(net))}</td></tr>
+      <tr class="tot"><td>Cash balance</td><td class="${G.cash>5000?"good":"bad"}">${fmt(G.cash)}</td></tr>
+      <tr><td>Inventory left</td><td>${r.unitsLeft} ${a.unitLabel}s (${fmt(inventoryValue(G))})</td></tr>
+    </table>
+    ${peek?`<div class="peek"><h4>${ic("eye")} Next month — ${MONTH_NAMES[G.month]}</h4>
+      <ul>${peek.map(p=>`<li>${p}</li>`).join("")}</ul></div>`:""}
+    <div class="acts"><button class="btn primary" id="next">
+      ${G.phase==="won"?ic("trophy")+" See final results":"Continue to "+MONTH_NAMES[G.month]+" "+ic("caret")}</button></div>`);
+  $("#next").onclick=()=>{
+    closeModal();
+    if(G.phase==="won")return renderVictory();
+    beginMonth();
+  };
+}
+
+/* =====================================================================
+   END SCREENS
+   ===================================================================== */
+function confetti(){
+  const c=document.createElement("canvas"); c.id="confetti";
+  document.body.appendChild(c);
+  const ctx=c.getContext("2d");
+  const dpr=Math.min(2,devicePixelRatio||1);
+  const size=()=>{c.width=innerWidth*dpr;c.height=innerHeight*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);};
+  size();
+  const cols=["#C2410C","#E8871E","#CA8A04","#7C4A52","#6F4E37","#F5D5A8"];
+  const P=[];
+  for(let i=0;i<150;i++)P.push({
+    x:Math.random()*innerWidth, y:-30-Math.random()*innerHeight*0.7,
+    w:5+Math.random()*7, h:8+Math.random()*10,
+    vy:1.6+Math.random()*3.1, vx:-1.1+Math.random()*2.2,
+    a:Math.random()*Math.PI, va:-.12+Math.random()*.24,
+    c:cols[(Math.random()*cols.length)|0]
+  });
+  const t0=performance.now();
+  (function frame(now){
+    const el=now-t0;
+    ctx.clearRect(0,0,innerWidth,innerHeight);
+    let live=false;
+    for(const p of P){
+      p.x+=p.vx; p.y+=p.vy; p.a+=p.va;
+      if(p.y<innerHeight+40)live=true;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a);
+      ctx.globalAlpha=el>3600?Math.max(0,1-(el-3600)/1200):1;
+      ctx.fillStyle=p.c; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); ctx.restore();
+    }
+    if(live&&el<4800)requestAnimationFrame(frame);
+    else c.remove();
+  })(t0);
+}
+function renderVictory(){
+  const sc=finalScore(G), bl=badges(G,sc);
+  const rev=G.history.reduce((x,r)=>x+r.revenue,0);
+  const prof=G.history.reduce((x,r)=>x+r.profit,0);
+  app.innerHTML=`
+  <div class="finale">
+    <div class="kicker">${ic("flag")} 12 months complete</div>
+    <h1 style="margin-top:12px">You survived the year!</h1>
+    <p class="small">${esc(G.storeName)} · ${esc(G.teamName)} · ${porterName(G.advantage,G.scope)}${G.nicheType?" ("+NICHES[G.nicheType].name+")":""}</p>
+    <div class="score num" id="bigScore">$0</div>
+    <div class="score-k">Final business valuation — write this on the board</div>
+    <div class="badges">${bl.map((b,i)=>`<span class="badge" style="animation-delay:${.5+i*.14}s">${b}</span>`).join("")}</div>
+    <p class="small">${ic("target")} ${strategyNote(G,sc)}</p>
+  </div>
+  <div class="card paper verdict"><h3>${ic("grid")} Porter verdict</h3><p class="small">${porterVerdict(G)}</p></div>
+  <div class="grid">
+    <div class="card"><h3>${ic("wallet")} Valuation breakdown</h3>
+      <div class="spec"><span>Cash</span><b class="num">${fmt(sc.cash)}</b></div>
+      <div class="spec"><span>Avg. profit last 3 months × 10</span><b class="num ${sc.profitComponent>=0?"good":"bad"}">${fmt(sc.profitComponent)}</b></div>
+      <div class="spec"><span>Inventory &amp; assets</span><b class="num">${fmt(sc.inv+sc.assets)}</b></div>
+      <div class="spec"><span>Bank debt</span><b class="num bad">−${fmt(sc.bankDebt)}</b></div>
+      <div class="spec"><span>Unpaid family money</span><b class="num bad">−${fmt(sc.famDebt)}</b></div>
+      <div class="spec"><span>× Ownership kept (${100-sc.equity*100}%)</span><b class="num">${fmt(sc.valuation)}</b></div>
+    </div>
+    <div class="card"><h3>${ic("chart")} Year in review</h3>
+      <div class="spec"><span>Total revenue</span><b class="num">${fmt(rev)}</b></div>
+      <div class="spec"><span>Total profit</span><b class="num ${prof>=0?"good":"bad"}">${fmt(prof)}</b></div>
+      <div class="spec"><span>Profitable months</span><b>${G.history.filter(r=>r.profit>0).length} / 12</b></div>
+      <div class="spec"><span>Final reputation</span><b>${Math.round(G.rep)}/100</b></div>
+      <div class="spec"><span>Avg. strategy clarity</span><b>${Math.round(avgCoherence(G))}/100 (${clarityLabel(avgCoherence(G))})</b></div>
+      <div class="spec"><span>Lowest cash point</span><b class="num ${G.minCash<2000?"bad":"good"}">${fmt(Math.max(0,G.minCash))}</b></div>
+    </div>
+  </div>
+  ${chartHTML(true)}
+  <div class="card"><h3>${ic("cap")} Debrief — discuss as a team</h3>
+    <ol class="debrief">${debriefQuestions(G).map(q=>`<li>${q}</li>`).join("")}</ol></div>
+  <div class="hero-cta"><button class="btn primary big" id="again">${ic("gear")} New Game</button></div>`;
+  $("#again").onclick=renderSetup;
+  wireChart();
+  animateNum($("#bigScore"),0,sc.valuation,1400);
+  setTimeout(confetti,260);
+}
+function renderBankrupt(){
+  document.body.classList.add("doom");
+  const drains=biggestDrains(G);
+  const top=drains.find(d=>!/Recurring/.test(d[0]));
+  let lesson="Cash is oxygen: profit on paper means nothing if the bank account hits zero first.";
+  if(top&&/Inventory/.test(top[0])&&top[1]>8000)
+    lesson="Inventory is cash wearing a disguise — buy what will sell this month, not what might sell someday.";
+  else if(top&&/Marketing|Staffing|Improvements/.test(top[0])&&top[1]>3000)
+    lesson="You spent on growth before the revenue existed to pay for it. Growth spending is great — when this month's sales can cover it.";
+  else if(drains[0]&&/Recurring/.test(drains[0][0]))
+    lesson="Rent and payroll burned every month whether you acted or not. Plan around the burn rate before planning for growth.";
+  app.innerHTML=`
+  <div class="finale">
+    <div style="font-size:3.4rem;color:var(--terra)">${ic("skull","ic-lg")}</div>
+    <h1 style="font-size:clamp(2rem,6vw,3rem);color:var(--terra)">BANKRUPT</h1>
+    <p class="small">${esc(G.storeName)} closed its doors in ${MONTH_NAMES[G.month]} — month ${G.month+1} of 12.</p>
+    <p class="small warn" style="font-weight:700">${G.bankruptWhy||""}</p>
+  </div>
+  <div class="card paper verdict"><h3>${ic("grid")} Porter verdict</h3><p class="small">${porterVerdict(G)}</p></div>
+  <div class="grid">
+    <div class="card"><h3>${ic("wallet")} Biggest cash drains</h3>
+      ${drains.map(d=>`<div class="spec"><span>${d[0]}</span><b class="num bad">−${fmt(d[1])}</b></div>`).join("")}</div>
+    <div class="card"><h3>${ic("cal")} How it happened</h3>
+      <ul class="tl-list">${G.log.slice(-11).map(l=>`<li><b>${MONTH_NAMES[Math.min(11,l.m)]}:</b> ${l.txt}</li>`).join("")}</ul></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h3>${ic("bulb")} The lesson</h3>
+    <p class="small">${lesson}</p></div>
+  <div class="card" style="margin-top:14px"><h3>${ic("cap")} Debrief — discuss as a team</h3>
+    <ol class="debrief">${debriefQuestions(G).map(q=>`<li>${q}</li>`).join("")}</ol></div>
+  <div class="hero-cta"><button class="btn primary big" id="again">${ic("gear")} New Game</button></div>`;
+  $("#again").onclick=()=>{document.body.classList.remove("doom");renderSetup();};
+}
+
+renderSetup();
+</script>
+</body>
+</html>
