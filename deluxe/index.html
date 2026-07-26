@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Circuit Startup — Deluxe Edition</title>
 <style>
@@ -329,7 +330,11 @@ h1,h2,h3{font-weight:800; letter-spacing:-.015em; line-height:1.18}
 
 /* ---------- Porter 2x2 matrix ---------- */
 .matrix-card{margin-top:18px}
-.matrix{display:grid; grid-template-columns:auto 1fr 1fr; grid-template-rows:auto 1fr 1fr; gap:9px; margin-top:6px}
+.matrix{display:grid; grid-template-columns:auto minmax(0,1fr) minmax(0,1fr); grid-template-rows:auto 1fr 1fr; gap:9px; margin-top:6px}
+/* explicit placement — immune to hidden/reordered children */
+.mx-corner{grid-area:1/1} .mx-c1{grid-area:1/2} .mx-c2{grid-area:1/3}
+.mx-r1{grid-area:2/1} .mx-a{grid-area:2/2} .mx-b{grid-area:2/3}
+.mx-r2{grid-area:3/1} .mx-c{grid-area:3/2} .mx-d{grid-area:3/3}
 .mx-ch{display:grid; place-items:center; font-size:.7rem; font-weight:800; letter-spacing:.1em;
   text-transform:uppercase; color:var(--t3); text-align:center; padding:2px}
 .mx-rh{writing-mode:vertical-rl; transform:rotate(180deg)}
@@ -549,8 +554,8 @@ details.fold[open] summary .ic.caret{transform:rotate(90deg)}
   .sum-box{flex:1 1 100%; min-width:0}
 
   /* keep the 2x2 matrix a real 2x2, just compact */
-  .matrix{grid-template-columns:15px 1fr 1fr; gap:6px}
-  .mx-ch{font-size:.54rem; letter-spacing:.03em}
+  .matrix{grid-template-columns:17px minmax(0,1fr) minmax(0,1fr); gap:6px}
+  .mx-ch{font-size:.58rem; letter-spacing:.02em}
   .mx-cell{padding:10px 9px; min-height:78px; border-radius:11px}
   .mx-cell .n{font-size:.79rem} .mx-cell .x{font-size:.67rem; margin-top:2px}
   .mx-cell.on{transform:none}
@@ -1559,18 +1564,24 @@ function guideFold(){
 let pick={advantage:null,scope:null,niche:null,pricing:"match"};
 
 function matrixHTML(){
-  const q=(adv,sc)=>{
+  const q=(adv,sc,pos)=>{
     const on=pick.advantage===adv&&pick.scope===sc;
     const nm=porterName(adv,sc);
     const x=adv==="lowcost"
       ? (sc==="broad"?"Lowest costs, everyone's business":"Lowest costs, one corner of the market")
       : (sc==="broad"?"Worth paying more for, everyone":"Worth paying more for, one corner");
-    return`<div class="mx-cell ${on?"on":""}"><div class="n">${nm}</div><div class="x">${x}</div></div>`;
+    return`<div class="mx-cell ${pos} ${on?"on":""}"><div class="n">${nm}</div><div class="x">${x}</div></div>`;
   };
+  /* Every child is placed explicitly (see .mx-* grid-area rules) so the 2x2 can
+     never stagger if a label is hidden or reordered at some breakpoint. */
   return`<div class="matrix">
-    <div class="mx-ch"></div><div class="mx-ch c2">Low-cost operator</div><div class="mx-ch c2">Premium experience</div>
-    <div class="mx-ch mx-rh">Broad market</div>${q("lowcost","broad")}${q("premium","broad")}
-    <div class="mx-ch mx-rh">Focused niche</div>${q("lowcost","niche")}${q("premium","niche")}
+    <div class="mx-ch mx-corner"></div>
+    <div class="mx-ch mx-c1">Low-cost operator</div>
+    <div class="mx-ch mx-c2">Premium experience</div>
+    <div class="mx-ch mx-rh mx-r1">Broad market</div>
+    <div class="mx-ch mx-rh mx-r2">Focused niche</div>
+    ${q("lowcost","broad","mx-a")}${q("premium","broad","mx-b")}
+    ${q("lowcost","niche","mx-c")}${q("premium","niche","mx-d")}
   </div>`;
 }
 function setupSummary(){
