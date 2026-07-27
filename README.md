@@ -8,12 +8,15 @@ step, no external dependencies.
 **Play it:** open `index.html` in any modern browser, or visit the GitHub Pages
 URL for this repository.
 
-## Two editions
+## What's in this repository
 
-| Edition | Path | URL | Notes |
+| Site | Path | URL | Notes |
 |---|---|---|---|
-| **Classroom** | `index.html` | `/Startup-Game/` | The version to send students. Stable. |
-| **Deluxe** | `deluxe/index.html` | `/Startup-Game/deluxe/` | Same game, richer presentation. For future use. |
+| **Circuit Startup — classroom** | `index.html` | `/Startup-Game/` | The version to send students. Stable. |
+| **Circuit Startup — deluxe** | `deluxe/index.html` | `/Startup-Game/deluxe/` | Same game, richer presentation. For future use. |
+| **Business Model Toolkit** | `business-model/` | `/Startup-Game/business-model/` | Interactive circular business model; each segment opens its worksheets and tools. See [`business-model/README.md`](business-model/README.md). |
+
+## Two editions of the simulation
 
 Both run the **identical game engine** — the deluxe edition splices in the exact
 same `<script id="engine">` block, so the economics, balance, and random seeding

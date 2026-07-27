@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Business Model Toolkit — worksheets and tools for every part of the business</title>
+<meta name="description" content="An interactive business model. Click any segment — marketing, sales, operations, finance, accounting, human resources, IT, R&amp;D — to open the worksheets and tools for that part of the business.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:title" content="Business Model Toolkit">
+<meta property="og:description" content="Nine functions, one customer at the centre. Click a segment to open its worksheets and tools.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%233A6B50'/><circle cx='16' cy='16' r='5.5' fill='%23F5F1E9'/></svg>">
+<link rel="stylesheet" href="assets/styles.css">
+<script>
+  /* Applied before first paint so the page never flashes the wrong theme. */
+  (function(){
+    try{
+      var saved = localStorage.getItem('bmt-theme');
+      var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.setAttribute('data-theme', saved || (prefersDark ? 'dark' : 'light'));
+    }catch(e){}
+  })();
+</script>
+</head>
+<body>
+
+<a class="skip-link" href="#toolkit">Skip to the toolkit</a>
+
+<!-- Icon sprite. Every icon is referenced by <use href="#ic-…">. -->
+<svg class="sr-only" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <g id="sym-defaults"></g>
+  </defs>
+
+  <symbol id="ic-customer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="8.4" r="4"/>
+    <path d="M4.6 20.4a7.6 7.6 0 0 1 14.8 0"/>
+  </symbol>
+
+  <symbol id="ic-marketing" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 10.4v3.2a1 1 0 0 0 1 1h2.2L11 18.6V5.4L6.2 9.4H4a1 1 0 0 0-1 1Z"/>
+    <path d="M14.6 9.2a4 4 0 0 1 0 5.6"/>
+    <path d="M17.4 6.4a8 8 0 0 1 0 11.2"/>
+  </symbol>
+
+  <symbol id="ic-sales" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 19.5h18"/>
+    <path d="M4 15.6l5-5.2 3.6 3.6L20 6.4"/>
+    <path d="M15.2 6.4H20v4.8"/>
+  </symbol>
+
+  <symbol id="ic-operations" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="3.1"/>
+    <circle cx="12" cy="12" r="7.6" opacity=".5"/>
+    <path d="M12 1.8v2.6M12 19.6v2.6M22.2 12h-2.6M4.4 12H1.8M19.2 4.8l-1.9 1.9M6.7 17.3l-1.9 1.9M19.2 19.2l-1.9-1.9M6.7 6.7 4.8 4.8"/>
+  </symbol>
+
+  <symbol id="ic-finance" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2.8 9.4 12 4.2l9.2 5.2"/>
+    <path d="M5.4 11.4v6.4M9.8 11.4v6.4M14.2 11.4v6.4M18.6 11.4v6.4"/>
+    <path d="M3.2 20.2h17.6"/>
+  </symbol>
+
+  <symbol id="ic-accounting" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="5" y="2.8" width="14" height="18.4" rx="2.2"/>
+    <path d="M8.6 7.2h6.8"/>
+    <path d="M9 11.6h.02M12 11.6h.02M15 11.6h.02M9 15.2h.02M12 15.2h.02M15 15.2h.02M9 18.2h6"/>
+  </symbol>
+
+  <symbol id="ic-hr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="9.2" cy="8" r="3.2"/>
+    <path d="M3 19.8a6.2 6.2 0 0 1 12.4 0"/>
+    <path d="M16.6 5.2a3.2 3.2 0 0 1 0 5.8"/>
+    <path d="M17.8 13.6a6.2 6.2 0 0 1 3.4 5"/>
+  </symbol>
+
+  <symbol id="ic-it" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="3.6" width="18" height="6.4" rx="1.8"/>
+    <rect x="3" y="14" width="18" height="6.4" rx="1.8"/>
+    <path d="M6.6 6.8h.02M6.6 17.2h.02"/>
+    <path d="M10 6.8h6.6M10 17.2h6.6"/>
+  </symbol>
+
+  <symbol id="ic-rnd" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9.2 16.8a5.6 5.6 0 1 1 5.6 0v1.8a1.6 1.6 0 0 1-1.6 1.6h-2.4a1.6 1.6 0 0 1-1.6-1.6Z"/>
+    <path d="M9.4 17h5.2"/>
+    <path d="M12 8.2v3.4"/>
+  </symbol>
+
+  <symbol id="ic-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 8h10M9 4l4 4-4 4"/>
+  </symbol>
+
+  <symbol id="ic-download" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 2.6v7.2"/><path d="M5 7l3 3 3-3"/><path d="M2.8 12.4h10.4"/>
+  </symbol>
+
+  <symbol id="ic-external" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9.4 2.8H13v3.6"/><path d="M12.8 3.2 7.4 8.6"/>
+    <path d="M12.4 9.6v2.8a1 1 0 0 1-1 1H3.6a1 1 0 0 1-1-1V4.6a1 1 0 0 1 1-1h2.8"/>
+  </symbol>
+
+  <symbol id="ic-clock" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="8" cy="8" r="5.6"/><path d="M8 5v3.2l2 1.4"/>
+  </symbol>
+
+  <symbol id="ic-cursor" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 2.6 12.4 8 8.8 9 7 13z"/>
+  </symbol>
+
+  <symbol id="ic-sun" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="10" cy="10" r="3.6"/>
+    <path d="M10 1.8v1.8M10 16.4v1.8M18.2 10h-1.8M3.6 10H1.8M15.8 4.2l-1.3 1.3M5.5 14.5l-1.3 1.3M15.8 15.8l-1.3-1.3M5.5 5.5 4.2 4.2"/>
+  </symbol>
+
+  <symbol id="ic-moon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16.4 12.6A7 7 0 0 1 7.4 3.6a7 7 0 1 0 9 9Z"/>
+  </symbol>
+
+  <symbol id="ic-close" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+    <path d="M5.5 5.5l9 9M14.5 5.5l-9 9"/>
+  </symbol>
+</svg>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="#top">
+      <svg class="brand-mark" id="brandMark" viewBox="0 0 100 100" aria-hidden="true"></svg>
+      <span class="brand-text">
+        <span class="brand-name" id="brandName">Business Model Toolkit</span>
+        <span class="brand-sub" id="brandSub">Worksheets &amp; tools</span>
+      </span>
+    </a>
+    <nav class="nav" aria-label="Primary">
+      <a href="#model">The model</a>
+      <a href="#toolkit">Toolkit</a>
+      <a href="#how" data-optional>How to use it</a>
+    </nav>
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch colour theme">
+      <svg class="sun" width="19" height="19" aria-hidden="true"><use href="#ic-sun"/></svg>
+      <svg class="moon" width="19" height="19" aria-hidden="true"><use href="#ic-moon"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============================================================ hero -- -->
+  <section class="hero" id="model">
+    <div class="wrap">
+      <p class="eyebrow" id="heroEyebrow">A working model, not a poster</p>
+      <h1 class="hero-title" id="heroTitle">Every part of the business, built around one person.</h1>
+      <p class="hero-lead" id="heroLead"></p>
+    </div>
+
+    <div class="wheel-stage">
+      <div class="wheel-halo" aria-hidden="true"></div>
+      <svg class="wheel" id="wheel" viewBox="0 0 800 800" role="group"
+           aria-label="Business model. Select a segment to open its worksheets and tools."></svg>
+    </div>
+
+    <p class="wheel-hint">
+      <svg width="15" height="15" aria-hidden="true"><use href="#ic-cursor"/></svg>
+      Select any segment to open its worksheets and tools
+    </p>
+  </section>
+
+  <div class="wrap"><hr class="rule"></div>
+
+  <!-- ============================================================= how -- -->
+  <section class="section" id="how">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">How to use it</p>
+        <h2 class="section-title">Start at the centre and work outwards.</h2>
+        <p class="section-lead">The model is not a filing cabinet. Each segment answers a small number of
+          questions, and each worksheet exists to force one of those questions to be answered in writing.</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <span class="step-num">01</span>
+          <h3>Define the customer</h3>
+          <p>Everything outside the centre is a bet on who you are serving. Get that written down
+             first — the other eight segments inherit it.</p>
+        </div>
+        <div class="step">
+          <span class="step-num">02</span>
+          <h3>Open one segment</h3>
+          <p>Pick the part of the business that is currently costing you the most sleep. Read the
+             questions it is meant to answer before you touch a worksheet.</p>
+        </div>
+        <div class="step">
+          <span class="step-num">03</span>
+          <h3>Fill it in with real numbers</h3>
+          <p>Download the tool, complete it against your actual business, and keep it. A model is
+             only useful once it disagrees with you.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================= toolkit -- -->
+  <section class="section" id="toolkit" style="padding-top:0">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">The full toolkit</p>
+        <h2 class="section-title">Nine parts of the business.</h2>
+        <p class="section-lead">The same nine segments as the model above, in list form. Select any one
+          to see its worksheets and tools.</p>
+      </div>
+      <div class="cards" id="cards"></div>
+    </div>
+  </section>
+
+  <noscript>
+    <div class="noscript">
+      <h2>JavaScript is required</h2>
+      <p>The interactive model and its worksheet library are built in the browser. Please enable
+         JavaScript to use this site.</p>
+    </div>
+  </noscript>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span id="footerNote">Built to be used, printed, marked up, and argued with.</span>
+    <span><a href="../">Circuit Startup simulation</a></span>
+  </div>
+</footer>
+
+<!-- ============================================================== panel -- -->
+<dialog class="panel" id="panel" aria-labelledby="panelTitle">
+  <div class="panel-inner">
+    <header class="panel-head">
+      <span class="panel-head-icon"><svg width="26" height="26" aria-hidden="true"><use id="panelIconUse" href="#ic-customer"/></svg></span>
+      <div>
+        <p class="panel-eyebrow" id="panelEyebrow">Business function</p>
+        <h2 id="panelTitle">Customer</h2>
+        <p class="panel-tagline" id="panelTagline"></p>
+      </div>
+      <button class="panel-close" id="panelClose" type="button" aria-label="Close">
+        <svg width="18" height="18" aria-hidden="true"><use href="#ic-close"/></svg>
+      </button>
+    </header>
+    <div class="panel-body" id="panelBody"></div>
+    <footer class="panel-foot">
+      <span id="panelCount"></span>
+      <span class="panel-nav">
+        <button type="button" id="panelPrev">← Previous</button>
+        <button type="button" id="panelNext">Next →</button>
+      </span>
+    </footer>
+  </div>
+</dialog>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
